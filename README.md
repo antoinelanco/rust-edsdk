@@ -15,3 +15,23 @@ It's not necessarily useful to look at the main.rs file.
 Ok test : `LD_LIBRARY_PATH=native cargo test --package edsdk --test camera --verbose -- ok_test --exact --show-output;` -> Ok
 
 Ko test : `LD_LIBRARY_PATH=native cargo test --package edsdk --test camera --verbose -- ko_test --exact --show-output;` -> Segfault
+
+
+
+Small additional remark:
+
+In `EDSDKTypes.h`, lines 940–955, within the `EdsBatteryLevel2` enum, the value `0` is defined three times.
+
+```
+/*---------------------------------
+ Battery level
+---------------------------------*/
+typedef enum
+{
+    kEdsBatteryLevel2_Empty = 0,
+    kEdsBatteryLevel2_Error = 0,
+    kEdsBatteryLevel2_BCLevel = 0,
+    ...
+
+} EdsBatteryLevel2;
+```
