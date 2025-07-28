@@ -35,3 +35,6 @@ typedef enum
 
 } EdsBatteryLevel2;
 ```
+
+
+Moreover, in `EDSDKTypes.h`, the compilation target `TARGET_OS_LINUX` doesn’t work on Ubuntu (at least on my system). I replaced it with ` __linux__`, which works for me and I believe should work for all Linux systems.

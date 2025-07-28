@@ -204,7 +204,7 @@ async fn main() -> Result<(), EdsError> {
     }
     println!("== Close camera session ==");
     eds_close_session(camera_ref)?;
-    println!("== End ==");
-    eds_terminate_sdk()?;
+    // println!("== End ==");
+    // eds_terminate_sdk()?;
     Ok(())
 }
