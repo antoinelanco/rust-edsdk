@@ -7,8 +7,6 @@ use edsdk::{
 
 #[test]
 fn main() -> Result<(), EdsError> {
-    unsafe { std::env::set_var("RUST_BACKTRACE", "full") };
-
     eds_initialize_sdk()?;
     let list: EdsCameraListRef = eds_get_camera_list()?;
     let camera: EdsCameraRef = eds_get_child_at_index(list, 0)?;
