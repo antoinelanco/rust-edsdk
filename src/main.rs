@@ -7,7 +7,6 @@ use std::{
         Arc,
         atomic::{AtomicBool, Ordering},
     },
-    thread,
     time::Duration,
 };
 use tokio::{sync::Mutex, time};
@@ -41,29 +40,30 @@ fn download_evf(camera_ref: EdsBaseRef, nb_frame: u64) -> Result<(), EdsError> {
         }
     }
 
-    Ok(())
-    // eds_release(out_stream_image_ref)?;
-    // eds_release(out_stream)
+    eds_release(out_stream_image_ref)?;
+    eds_release(out_stream)
 }
 
 fn download(in_ref: EdsBaseRef) -> Result<(), EdsError> {
     let dir_info = eds_get_directory_item_info(in_ref)?;
+    println!("{:?}", dir_info);
+
     let out_stream = eds_create_memory_stream(dir_info.size)?;
+
     eds_download(in_ref, dir_info.size, out_stream)?;
     eds_download_complete(in_ref)?;
-    let image_ref = eds_create_image_ref(out_stream)?;
-    let image_info = eds_get_image_info(image_ref, EdsImageSource::FullView)?;
-    println!("{image_info:?}");
+    // let image_ref = eds_create_image_ref(out_stream)?;
+    // let image_info = eds_get_image_info(image_ref, EdsImageSource::FullView)?;
+    // println!("{image_info:?}");
     let pointer = eds_get_pointer(out_stream)? as *const u8;
     let length = eds_get_length(out_stream)?;
     let data = unsafe { slice::from_raw_parts(pointer, length as usize) }.to_vec();
 
-    eds_release(in_ref)?;
     eds_release(out_stream)?;
 
     println!("get image");
     let path = "images/".to_string();
-    let file_name = format!("{}image.jpeg", path);
+    let file_name = format!("{}{}", path, dir_info.get_sz_file_name());
 
     File::create(&file_name)
         .map(|mut buffer| buffer.write_all(&data))
@@ -73,7 +73,6 @@ fn download(in_ref: EdsBaseRef) -> Result<(), EdsError> {
 }
 
 async fn get_event(term: Arc<AtomicBool>) {
-    println!("Loop thread id: {:?}", thread::current().id());
     while term.load(Ordering::SeqCst) {
         if let Err(err) = eds_get_event() {
             eprintln!("{err:?}")
@@ -99,17 +98,20 @@ fn set_mode(camera_ref: EdsBaseRef, mode: Mode) -> Result<(), EdsError> {
 fn obj_handler(
     in_event: EdsObjectEvent,
     in_ref: EdsBaseRef,
-    _ctx: Arc<Mutex<ObjectContext>>,
+    _context: Arc<Mutex<ObjectContext>>,
 ) -> EdsError {
-    println!("Event obj thread id: {:?}", thread::current().id());
-
     println!("{in_event:?}");
-    match in_event {
+    let res = match in_event {
         EdsObjectEvent::DirItemRequestTransfer => match download(in_ref) {
             Ok(()) => EdsError::ErrOk,
             Err(err) => err,
         },
         _ => EdsError::ErrOk,
+    };
+
+    match eds_release(in_ref) {
+        Ok(()) => res,
+        Err(err) => err,
     }
 }
 
@@ -118,8 +120,6 @@ fn state_handler(
     event_data: EdsUInt32,
     context: Arc<Mutex<StateContext>>,
 ) -> EdsError {
-    println!("Event state thread id: {:?}", thread::current().id());
-
     println!("{event:?} : {event_data}");
     match event {
         EdsStateEvent::JobStatusChanged => {
@@ -130,24 +130,64 @@ fn state_handler(
     EdsError::ErrOk
 }
 
+fn property_handler(
+    event: EdsPropertyEvent,
+    property_id: EdsPropertyID,
+    event_data: EdsUInt32,
+    _context: Arc<Mutex<PropertyContext>>,
+) -> EdsError {
+    println!("{event:?} : {property_id:?} : {event_data}");
+    EdsError::ErrOk
+}
+
 #[tokio::main]
 async fn main() -> Result<(), EdsError> {
-    println!("== Start ==");
-    println!("Main thread id: {:?}", thread::current().id());
+    init(|| open_cam(core)).await
+}
 
-    let context_status = Arc::new(Mutex::new(StateContext { job_status: 0 }));
-    let object_context = Arc::new(Mutex::new(ObjectContext {}));
-
-    println!("== Init ==");
+async fn init<T, Fut>(f: T) -> Result<(), EdsError>
+where
+    T: Fn() -> Fut,
+    Fut: Future<Output = Result<(), EdsError>>,
+{
+    println!("== Initialize sdk ==");
     eds_initialize_sdk()?;
+    match f().await {
+        Ok(()) => (),
+        Err(err) => eprintln!("{:?}", err),
+    }
+    println!("== Terminate sdk ==");
+    eds_terminate_sdk()
+}
+
+async fn open_cam<T, Fut>(f: T) -> Result<(), EdsError>
+where
+    T: Fn(EdsBaseRef) -> Fut,
+    Fut: Future<Output = Result<(), EdsError>>,
+{
     let camera_list_ref = eds_get_camera_list()?;
     let num_of_camera = eds_get_child_count(camera_list_ref)?;
     assert!(num_of_camera > 0, "No camera found");
     let camera_ref = eds_get_child_at_index(camera_list_ref, 0)?;
+    eds_release(camera_list_ref)?;
+    println!("== Open camera session ==");
     eds_open_session(camera_ref)?;
+    match f(camera_ref).await {
+        Ok(()) => (),
+        Err(err) => eprintln!("{:?}", err),
+    }
+    println!("== Close camera session ==");
+    eds_close_session(camera_ref)?;
+    eds_release(camera_ref)
+}
 
+async fn core(camera_ref: EdsBaseRef) -> Result<(), EdsError> {
+    let status_context = Arc::new(Mutex::new(StateContext { job_status: 0 }));
+    let object_context = Arc::new(Mutex::new(ObjectContext {}));
+    let property_context = Arc::new(Mutex::new(PropertyContext {}));
     set_object_event_handler!(camera_ref, object_context, obj_handler);
-    set_state_event_handler!(camera_ref, context_status, state_handler);
+    set_state_event_handler!(camera_ref, status_context, state_handler);
+    set_property_event_handler!(camera_ref, property_context, property_handler);
 
     set_save_to(camera_ref, EdsSaveTo::Host)?;
 
@@ -162,26 +202,13 @@ async fn main() -> Result<(), EdsError> {
     let term = Arc::new(AtomicBool::new(true));
     tokio::spawn(get_event(term.clone()));
 
-    // let info: TagEdsDeviceInfo = eds_get_device_info(camera_ref)?;
-    // println!("{info:?}");
-
-    // let camera_child_count = eds_get_child_count(camera_ref)?;
-    // println!("Camera child count {camera_child_count}");
-
-    // let volume_ref = eds_get_child_at_index(camera_ref, 0)?;
-
-    // eds_format_volume(volume_ref)?;
-
-    // let volume_info = eds_get_volume_info(volume_ref)?;
-    // println!("{volume_info:?}");
-
-    // eds_close_session(camera_ref)?;
-    // exit(0);
-
     time::sleep(Duration::from_secs(1)).await;
 
     println!("== Mode photo ==");
     set_mode(camera_ref, Mode::Photo)?;
+
+    // let shoot_available = get_setting(camera_ref, EdsPropertyID::AvailableShots, 0)?;
+    // println!("Shoot available : {:?}", shoot_available);
 
     println!("== Shoot ==");
     eds_send_command(camera_ref, PressShutterButton, Completely.into())?;
@@ -189,22 +216,12 @@ async fn main() -> Result<(), EdsError> {
 
     time::sleep(Duration::from_secs(1)).await;
 
-    // println!("== Mode video ==");
-    // set_mode(camera_ref, Mode::Video)?;
-
-    // println!("== Download evf ==");
-    // download_evf(camera_ref, 1000)?;
-
     println!("== Set term false ==");
     term.store(false, Ordering::SeqCst);
 
     println!("== Wait status job is zero ==");
-    while context_status.lock().await.job_status > 0 {
+    while status_context.lock().await.job_status > 0 {
         time::sleep(Duration::from_secs(1)).await;
     }
-    println!("== Close camera session ==");
-    eds_close_session(camera_ref)?;
-    // println!("== End ==");
-    // eds_terminate_sdk()?;
     Ok(())
 }

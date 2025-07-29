@@ -1105,7 +1105,7 @@ impl Debug for TagEdsVolumeInfo {
 
 pub type EdsVolumeInfo = TagEdsVolumeInfo;
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 pub struct TagEdsDirectoryItemInfo {
     pub size: EdsUInt64,
     pub is_folder: EdsBool,
@@ -1114,6 +1114,14 @@ pub struct TagEdsDirectoryItemInfo {
     pub sz_file_name: [EdsChar; 256usize],
     pub format: EdsUInt32,
     pub date_time: EdsUInt32,
+}
+
+impl TagEdsDirectoryItemInfo {
+    pub fn get_sz_file_name(&self) -> String {
+        let s = String::from_utf8(self.sz_file_name.to_vec()).unwrap_or("Unknow".to_string());
+        let cleaned: String = s.chars().filter(|&c| c != '\0').collect();
+        cleaned
+    }
 }
 impl Default for TagEdsDirectoryItemInfo {
     fn default() -> Self {
@@ -1128,6 +1136,23 @@ impl Default for TagEdsDirectoryItemInfo {
         }
     }
 }
+
+impl Debug for TagEdsDirectoryItemInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "EdsDirectoryItemInfo {{ size: {}, is_folder: {}, group_id: {}, option:{}, sz_file_name:{}, format:{}, date_time:{} }}",
+            self.size,
+            self.is_folder,
+            self.group_id,
+            self.option,
+            self.get_sz_file_name(),
+            self.format,
+            self.date_time,
+        )
+    }
+}
+
 pub type EdsDirectoryItemInfo = TagEdsDirectoryItemInfo;
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Default)]

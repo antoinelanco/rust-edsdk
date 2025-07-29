@@ -4,17 +4,9 @@ use std::{
     ptr::null_mut,
 };
 
-fn ret(code: EdsError) -> Result<(), EdsError> {
-    match code {
-        EdsError::ErrOk => Ok(()),
-        err => Err(err),
-    }
-}
-
 macro_rules! check_call {
     ($call:expr) => {{
         let code: EdsError = unsafe { $call };
-
         match code {
             EdsError::ErrOk => Ok(()),
             err => {
@@ -36,7 +28,10 @@ pub fn eds_terminate_sdk() -> Result<(), EdsError> {
     check_call!(EdsTerminateSDK())
 }
 pub fn eds_release(in_ref: EdsBaseRef) -> Result<(), EdsError> {
-    check_call!(EdsRelease(in_ref))
+    if !in_ref.is_null() {
+        check_call!(EdsRelease(in_ref))?;
+    };
+    Ok(())
 }
 pub fn eds_retain(in_ref: EdsBaseRef) -> Result<(), EdsError> {
     check_call!(EdsRetain(in_ref))
@@ -76,15 +71,13 @@ pub fn eds_get_property_size(
 ) -> Result<(EdsDataType, EdsUInt32), EdsError> {
     let mut out_data_type = EdsDataType::default();
     let mut out_size = EdsUInt32::default();
-    ret(unsafe {
-        EdsGetPropertySize(
-            in_ref,
-            in_property_id,
-            in_param,
-            &mut out_data_type,
-            &mut out_size,
-        )
-    })?;
+    check_call!(EdsGetPropertySize(
+        in_ref,
+        in_property_id,
+        in_param,
+        &mut out_data_type,
+        &mut out_size,
+    ))?;
     Ok((out_data_type, out_size))
 }
 pub fn eds_get_property_data(
@@ -94,15 +87,13 @@ pub fn eds_get_property_data(
     in_property_size: EdsUInt32,
 ) -> Result<*mut EdsVoid, EdsError> {
     let out_property_data = null_mut();
-    ret(unsafe {
-        EdsGetPropertyData(
-            in_ref,
-            in_property_id,
-            in_param,
-            in_property_size,
-            out_property_data,
-        )
-    })?;
+    check_call!(EdsGetPropertyData(
+        in_ref,
+        in_property_id,
+        in_param,
+        in_property_size,
+        out_property_data,
+    ))?;
     Ok(out_property_data)
 }
 pub fn eds_set_property_data(
@@ -112,15 +103,13 @@ pub fn eds_set_property_data(
     in_property_size: EdsUInt32,
     in_property_data: *const EdsVoid,
 ) -> Result<(), EdsError> {
-    ret(unsafe {
-        EdsSetPropertyData(
-            in_ref,
-            in_property_id,
-            in_param,
-            in_property_size,
-            in_property_data,
-        )
-    })
+    check_call!(EdsSetPropertyData(
+        in_ref,
+        in_property_id,
+        in_param,
+        in_property_size,
+        in_property_data,
+    ))
 }
 pub fn eds_get_property_desc(
     in_ref: EdsBaseRef,
@@ -224,14 +213,12 @@ pub fn eds_set_meta_image(
     in_meta_data_size: EdsUInt32,
     in_meta_data: *const EdsVoid,
 ) -> Result<(), EdsError> {
-    ret(unsafe {
-        EdsSetMetaImage(
-            in_dir_item_ref,
-            in_meta_type,
-            in_meta_data_size,
-            in_meta_data,
-        )
-    })
+    check_call!(EdsSetMetaImage(
+        in_dir_item_ref,
+        in_meta_type,
+        in_meta_data_size,
+        in_meta_data,
+    ))
 }
 pub fn eds_create_file_stream(
     in_file_name: *const EdsChar,
@@ -239,14 +226,12 @@ pub fn eds_create_file_stream(
     in_desired_access: EdsAccess,
 ) -> Result<EdsStreamRef, EdsError> {
     let mut out_stream = null_mut();
-    ret(unsafe {
-        EdsCreateFileStream(
-            in_file_name,
-            in_create_disposition,
-            in_desired_access,
-            &mut out_stream,
-        )
-    })?;
+    check_call!(EdsCreateFileStream(
+        in_file_name,
+        in_create_disposition,
+        in_desired_access,
+        &mut out_stream,
+    ))?;
     Ok(out_stream)
 }
 pub fn eds_create_memory_stream(in_buffer_size: EdsUInt64) -> Result<EdsStreamRef, EdsError> {
@@ -260,14 +245,12 @@ pub fn eds_create_file_stream_ex(
     in_desired_access: EdsAccess,
 ) -> Result<EdsStreamRef, EdsError> {
     let mut out_stream = null_mut();
-    ret(unsafe {
-        EdsCreateFileStreamEx(
-            in_file_name,
-            in_create_disposition,
-            in_desired_access,
-            &mut out_stream,
-        )
-    })?;
+    check_call!(EdsCreateFileStreamEx(
+        in_file_name,
+        in_create_disposition,
+        in_desired_access,
+        &mut out_stream,
+    ))?;
     Ok(out_stream)
 }
 pub fn eds_create_memory_stream_from_pointer(
@@ -275,9 +258,11 @@ pub fn eds_create_memory_stream_from_pointer(
     in_buffer_size: EdsUInt64,
 ) -> Result<EdsStreamRef, EdsError> {
     let mut out_stream = null_mut();
-    ret(unsafe {
-        EdsCreateMemoryStreamFromPointer(in_user_buffer, in_buffer_size, &mut out_stream)
-    })?;
+    check_call!(EdsCreateMemoryStreamFromPointer(
+        in_user_buffer,
+        in_buffer_size,
+        &mut out_stream
+    ))?;
     Ok(out_stream)
 }
 pub fn eds_get_pointer(in_stream: EdsStreamRef) -> Result<*mut EdsVoid, EdsError> {
@@ -305,14 +290,12 @@ pub fn eds_write(
     in_buffer: *const EdsVoid,
 ) -> Result<EdsUInt64, EdsError> {
     let mut out_written_size = EdsUInt64::default();
-    ret(unsafe {
-        EdsWrite(
-            in_stream_ref,
-            in_write_size,
-            in_buffer,
-            &mut out_written_size,
-        )
-    })?;
+    check_call!(EdsWrite(
+        in_stream_ref,
+        in_write_size,
+        in_buffer,
+        &mut out_written_size,
+    ))?;
     Ok(out_written_size)
 }
 pub fn eds_seek(
@@ -346,9 +329,12 @@ pub fn eds_set_progress_callback(
     in_progress_option: EdsProgressOption,
     in_context: *mut EdsVoid,
 ) -> Result<(), EdsError> {
-    ret(unsafe {
-        EdsSetProgressCallback(in_ref, in_progress_callback, in_progress_option, in_context)
-    })
+    check_call!(EdsSetProgressCallback(
+        in_ref,
+        in_progress_callback,
+        in_progress_option,
+        in_context
+    ))
 }
 pub fn eds_create_image_ref(in_stream_ref: EdsStreamRef) -> Result<EdsImageRef, EdsError> {
     let mut out_image_ref = null_mut();
@@ -375,16 +361,14 @@ pub fn eds_get_image(
     in_dst_size: EdsSize,
 ) -> Result<EdsStreamRef, EdsError> {
     let out_stream_ref = null_mut();
-    ret(unsafe {
-        EdsGetImage(
-            in_image_ref,
-            in_image_source,
-            in_image_type,
-            in_src_rect,
-            in_dst_size,
-            out_stream_ref,
-        )
-    })?;
+    check_call!(EdsGetImage(
+        in_image_ref,
+        in_image_source,
+        in_image_type,
+        in_src_rect,
+        in_dst_size,
+        out_stream_ref,
+    ))?;
     Ok(out_stream_ref)
 }
 pub fn eds_create_evf_image_ref(in_stream_ref: EdsStreamRef) -> Result<EdsEvfImageRef, EdsError> {
@@ -413,14 +397,12 @@ pub fn eds_set_property_event_handler(
     in_property_event_handler: EdsPropertyEventHandler,
     in_context: *mut EdsVoid,
 ) -> Result<(), EdsError> {
-    ret(unsafe {
-        EdsSetPropertyEventHandler(
-            in_camera_ref,
-            in_evnet,
-            in_property_event_handler,
-            in_context,
-        )
-    })
+    check_call!(EdsSetPropertyEventHandler(
+        in_camera_ref,
+        in_evnet,
+        in_property_event_handler,
+        in_context,
+    ))
 }
 pub fn eds_set_object_event_handler(
     in_camera_ref: EdsCameraRef,
@@ -428,9 +410,12 @@ pub fn eds_set_object_event_handler(
     in_object_event_handler: EdsObjectEventHandler,
     in_context: *mut EdsVoid,
 ) -> Result<(), EdsError> {
-    ret(unsafe {
-        EdsSetObjectEventHandler(in_camera_ref, in_evnet, in_object_event_handler, in_context)
-    })
+    check_call!(EdsSetObjectEventHandler(
+        in_camera_ref,
+        in_evnet,
+        in_object_event_handler,
+        in_context
+    ))
 }
 pub fn eds_set_camera_state_event_handler(
     in_camera_ref: EdsCameraRef,
@@ -438,9 +423,12 @@ pub fn eds_set_camera_state_event_handler(
     in_state_event_handler: EdsStateEventHandler,
     in_context: *mut EdsVoid,
 ) -> Result<(), EdsError> {
-    ret(unsafe {
-        EdsSetCameraStateEventHandler(in_camera_ref, in_evnet, in_state_event_handler, in_context)
-    })
+    check_call!(EdsSetCameraStateEventHandler(
+        in_camera_ref,
+        in_evnet,
+        in_state_event_handler,
+        in_context
+    ))
 }
 pub fn eds_create_stream(in_stream: *mut EdsIStream) -> Result<EdsStreamRef, EdsError> {
     let mut out_stream_ref = null_mut();
