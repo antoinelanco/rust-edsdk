@@ -1,4 +1,5 @@
 use std::{
+    ptr::null_mut,
     slice,
     sync::{
         Arc,
@@ -17,7 +18,7 @@ use edsdk::{
     eds_set_capacity, eds_set_object_event_handler, eds_terminate_sdk, set_evf_mode,
     set_output_device, set_save_to,
 };
-use tokio::{sync::Mutex, time};
+use tokio::time;
 
 async fn get_event(term: Arc<AtomicBool>) {
     while term.load(Ordering::SeqCst) {
@@ -47,12 +48,11 @@ fn download(in_ref: EdsBaseRef) -> Result<Vec<u8>, EdsError> {
     Ok(data)
 }
 
-fn obj_handler(
+extern "C" fn wrapper(
     in_event: EdsObjectEvent,
     in_ref: EdsBaseRef,
-    _ctx: Arc<Mutex<ObjectContext>>,
+    _ctx: *mut EdsVoid,
 ) -> EdsError {
-    let _ = _ctx;
     println!("{in_event:?}");
     match in_event {
         EdsObjectEvent::DirItemRequestTransfer => match download(in_ref) {
@@ -126,29 +126,8 @@ async fn ko_test() -> Result<(), EdsError> {
     set_evf_mode(camera_ref, 0)?;
     set_output_device(camera_ref, EdsEvfOutputDevice::Z)?;
 
-    let object_context = Arc::new(Mutex::new(ObjectContext {}));
-
-    {
-        extern "C" fn wrapper(
-            in_event: EdsObjectEvent,
-            in_ref: EdsBaseRef,
-            context: *mut EdsVoid,
-        ) -> EdsError {
-            let arc = unsafe { Arc::from_raw(context as *const Mutex<ObjectContext>) };
-            let result = obj_handler(in_event, in_ref, arc.clone());
-            std::mem::forget(arc);
-            result
-        }
-        let object_handler: EdsObjectEventHandler =
-            Some(wrapper as unsafe extern "C" fn(_, _, _) -> _);
-        let object_context = Arc::into_raw(object_context.clone()) as *mut EdsVoid;
-        eds_set_object_event_handler(
-            camera_ref,
-            EdsObjectEvent::All,
-            object_handler,
-            object_context,
-        )?;
-    };
+    let object_handler: EdsObjectEventHandler = Some(wrapper as unsafe extern "C" fn(_, _, _) -> _);
+    eds_set_object_event_handler(camera_ref, EdsObjectEvent::All, object_handler, null_mut())?;
 
     let term = Arc::new(AtomicBool::new(true));
     tokio::spawn(get_event(term.clone()));

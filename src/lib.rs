@@ -1,3 +1,5 @@
+use std::ffi::CStr;
+
 include!("sdk.rs");
 
 fn type_check<T: Any>(t: &T, data_t: &EdsDataType) -> bool {
@@ -55,8 +57,19 @@ fn dyn_cast(data_type: EdsDataType, ptr: *const c_void) -> Box<dyn Any> {
             let f64_ptr = ptr as *const f64;
             Box::new(unsafe { *f64_ptr } as EdsDouble)
         }
+        String => {
+            let c_str = unsafe { CStr::from_ptr(ptr as *const i8) };
+            let str = match c_str.to_str() {
+                Ok(str_slice) => str_slice.to_owned(),
+                Err(err) => {
+                    eprintln!("Fail to dynamique cast ptr in string : {}", err);
+                    "".to_owned()
+                }
+            };
+            Box::new(str)
+        }
         Unknown => Box::new(ptr),
-        _ => todo!("Not yet implement {:?}", data_type),
+        _ => todo!("Dyn cast of {:?} not yet implement", data_type),
     }
 }
 
@@ -66,6 +79,12 @@ pub fn get_setting(
     in_param: EdsInt32,
 ) -> Result<Box<dyn Any>, EdsError> {
     let (data_type, size) = eds_get_property_size(in_ref, prop_id, in_param)?;
+    // println!("{:?} : {}", data_type, size);
+    // let desc = eds_get_property_desc(in_ref, prop_id)?;
+    // println!("{:?}", desc);
+
+    assert!(!in_ref.is_null());
+    assert!(in_ref.is_aligned());
     let ptr = eds_get_property_data(in_ref, prop_id, in_param, size)?;
     let data = dyn_cast(data_type, ptr);
     Ok(data)
@@ -133,6 +152,11 @@ pub struct ObjectContext {}
 #[repr(C)]
 pub struct PropertyContext {}
 
+#[repr(C)]
+pub struct ProgressContext {}
+#[repr(C)]
+pub struct CameraAddedContext {}
+
 #[macro_export]
 macro_rules! set_object_event_handler {
     ($camera_ref:ident, $ctx:ident, $func:ident) => {{
@@ -163,7 +187,6 @@ macro_rules! set_object_event_handler {
         }
     }};
 }
-
 #[macro_export]
 macro_rules! set_state_event_handler {
     ($camera_ref:ident, $ctx:ident, $func:ident) => {{
@@ -194,7 +217,6 @@ macro_rules! set_state_event_handler {
         }
     }};
 }
-
 #[macro_export]
 macro_rules! set_property_event_handler {
     ($camera_ref:ident, $ctx:ident, $func:ident) => {{
@@ -223,6 +245,60 @@ macro_rules! set_property_event_handler {
                 property_handler,
                 property_context,
             )?;
+        }
+    }};
+}
+#[macro_export]
+macro_rules! set_progress_callback {
+    ($camera_ref:ident, $ctx:ident, $func:ident) => {{
+        use crate::{EdsBaseRef, EdsError, EdsVoid};
+        use std::sync::Arc;
+        use tokio::sync::Mutex;
+
+        unsafe {
+            extern "C" fn wrapper(
+                percent: EdsUInt32,
+                context: *mut EdsVoid,
+                cancel: *mut EdsBool,
+            ) -> EdsError {
+                let arc = unsafe { Arc::from_raw(context as *const Mutex<ProgressContext>) };
+                let result = $func(percent, arc.clone(), cancel);
+                std::mem::forget(arc);
+                result
+            }
+            let progress_callback: EdsProgressCallback =
+                Some(wrapper as unsafe extern "C" fn(_, _, _) -> _);
+
+            let progress_context = Arc::into_raw($ctx.clone()) as *mut EdsVoid;
+            eds_set_progress_callback(
+                $camera_ref,
+                progress_callback,
+                EdsProgressOption::Periodically,
+                progress_context,
+            )?;
+        }
+    }};
+}
+#[macro_export]
+macro_rules! set_camera_added {
+    ($ctx:ident, $func:ident) => {{
+        use crate::{EdsBaseRef, EdsError, EdsVoid};
+        use std::sync::Arc;
+        use tokio::sync::Mutex;
+
+        unsafe {
+            extern "C" fn wrapper(context: *mut EdsVoid) -> EdsError {
+                let arc = unsafe { Arc::from_raw(context as *const Mutex<CameraAddedContext>) };
+                let result = $func(arc.clone());
+                std::mem::forget(arc);
+                result
+            }
+            let camera_added_callback: EdsCameraAddedHandler =
+                Some(wrapper as unsafe extern "C" fn(_) -> _);
+
+            let camera_added_context = Arc::into_raw($ctx.clone()) as *mut EdsVoid;
+
+            eds_set_camera_added_handler(camera_added_callback, camera_added_context)?;
         }
     }};
 }

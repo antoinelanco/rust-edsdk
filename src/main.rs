@@ -1,7 +1,6 @@
 use edsdk::{EdsCameraCommand::*, EdsShutterButton::*, *};
+use opencv::{core::Vector, highgui, imgcodecs};
 use std::{
-    fs::File,
-    io::Write,
     slice,
     sync::{
         Arc,
@@ -27,14 +26,14 @@ fn download_evf(camera_ref: EdsBaseRef, nb_frame: u64) -> Result<(), EdsError> {
     let out_stream = eds_create_memory_stream(0)?;
     let out_stream_image_ref = eds_create_evf_image_ref(out_stream)?;
 
+    highgui::named_window("Video", highgui::WINDOW_NORMAL).unwrap();
     for _ in 0..nb_frame {
         match download_evf_aux(camera_ref, out_stream_image_ref, out_stream) {
             Ok(data) => {
-                println!("get frame");
-                let path = "images/".to_string();
-                let file_name = format!("{}frame.jpeg", path);
-
-                let _ = File::create(&file_name).map(|mut buffer| buffer.write_all(&data));
+                let buf = Vector::from_slice(&data);
+                let mat = imgcodecs::imdecode(&buf, imgcodecs::IMREAD_COLOR).unwrap_or_default();
+                highgui::imshow("Video", &mat).unwrap_or_default();
+                let _key = highgui::wait_key(1).unwrap_or_default();
             }
             Err(err) => eprintln!("{err:?}"),
         }
@@ -44,13 +43,31 @@ fn download_evf(camera_ref: EdsBaseRef, nb_frame: u64) -> Result<(), EdsError> {
     eds_release(out_stream)
 }
 
+fn progress_handler(
+    percent: EdsUInt32,
+    _context: Arc<Mutex<ProgressContext>>,
+    _cancel: *mut EdsBool,
+) -> EdsError {
+    println!("{}", percent);
+    if percent == 100 {
+        println!("Download is done !")
+    }
+    EdsError::ErrOk
+}
+
 fn download(in_ref: EdsBaseRef) -> Result<(), EdsError> {
+    let attribute = eds_get_attribute(in_ref)?;
+    println!("{:?}", attribute);
     let dir_info = eds_get_directory_item_info(in_ref)?;
     println!("{:?}", dir_info);
-
     let out_stream = eds_create_memory_stream(dir_info.size)?;
 
+    let progress_context = Arc::new(Mutex::new(ProgressContext {}));
+    set_progress_callback!(out_stream, progress_context, progress_handler);
+
+    println!("Start download");
     eds_download(in_ref, dir_info.size, out_stream)?;
+    println!("End download");
     eds_download_complete(in_ref)?;
     // let image_ref = eds_create_image_ref(out_stream)?;
     // let image_info = eds_get_image_info(image_ref, EdsImageSource::FullView)?;
@@ -58,17 +75,14 @@ fn download(in_ref: EdsBaseRef) -> Result<(), EdsError> {
     let pointer = eds_get_pointer(out_stream)? as *const u8;
     let length = eds_get_length(out_stream)?;
     let data = unsafe { slice::from_raw_parts(pointer, length as usize) }.to_vec();
-
     eds_release(out_stream)?;
 
-    println!("get image");
-    let path = "images/".to_string();
-    let file_name = format!("{}{}", path, dir_info.get_sz_file_name());
-
-    File::create(&file_name)
-        .map(|mut buffer| buffer.write_all(&data))
-        .unwrap()
-        .unwrap();
+    let buf = Vector::from_slice(&data);
+    if let Ok(mat) = imgcodecs::imdecode(&buf, imgcodecs::IMREAD_COLOR) {
+        highgui::named_window("Pic", highgui::WINDOW_NORMAL).unwrap();
+        highgui::imshow("Pic", &mat).unwrap();
+        let _key = highgui::wait_key(1).unwrap_or_default();
+    }
     Ok(())
 }
 
@@ -159,12 +173,19 @@ where
     println!("== Terminate sdk ==");
     eds_terminate_sdk()
 }
+fn camera_added_handler(_context: Arc<Mutex<CameraAddedContext>>) -> EdsError {
+    println!("Camera added");
+    EdsError::ErrOk
+}
 
 async fn open_cam<T, Fut>(f: T) -> Result<(), EdsError>
 where
     T: Fn(EdsBaseRef) -> Fut,
     Fut: Future<Output = Result<(), EdsError>>,
 {
+    let camera_added_context = Arc::new(Mutex::new(CameraAddedContext {}));
+    set_camera_added!(camera_added_context, camera_added_handler);
+
     let camera_list_ref = eds_get_camera_list()?;
     let num_of_camera = eds_get_child_count(camera_list_ref)?;
     assert!(num_of_camera > 0, "No camera found");
@@ -202,19 +223,25 @@ async fn core(camera_ref: EdsBaseRef) -> Result<(), EdsError> {
     let term = Arc::new(AtomicBool::new(true));
     tokio::spawn(get_event(term.clone()));
 
+    let shoot_available = get_setting(camera_ref, EdsPropertyID::AvailableShots, 0)?;
+    println!("Shoot available : {:?}", shoot_available);
+
     time::sleep(Duration::from_secs(1)).await;
 
     println!("== Mode photo ==");
     set_mode(camera_ref, Mode::Photo)?;
-
-    // let shoot_available = get_setting(camera_ref, EdsPropertyID::AvailableShots, 0)?;
-    // println!("Shoot available : {:?}", shoot_available);
 
     println!("== Shoot ==");
     eds_send_command(camera_ref, PressShutterButton, Completely.into())?;
     eds_send_command(camera_ref, PressShutterButton, Off.into())?;
 
     time::sleep(Duration::from_secs(1)).await;
+    // highgui::destroy_all_windows().unwrap_or_default();
+
+    // set_mode(camera_ref, Mode::Video)?;
+    // time::sleep(Duration::from_secs(1)).await;
+
+    // download_evf(camera_ref, 1000)?;
 
     println!("== Set term false ==");
     term.store(false, Ordering::SeqCst);
