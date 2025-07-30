@@ -1,6 +1,7 @@
 use edsdk::{EdsCameraCommand::*, EdsShutterButton::*, *};
 use opencv::{core::Vector, highgui, imgcodecs};
 use std::{
+    ffi::c_void,
     slice,
     sync::{
         Arc,
@@ -55,35 +56,17 @@ fn progress_handler(
     EdsError::ErrOk
 }
 
-fn download(in_ref: EdsBaseRef) -> Result<(), EdsError> {
-    let attribute = eds_get_attribute(in_ref)?;
-    println!("{:?}", attribute);
+fn download(in_ref: EdsBaseRef) -> Result<Vec<u8>, EdsError> {
     let dir_info = eds_get_directory_item_info(in_ref)?;
-    println!("{:?}", dir_info);
     let out_stream = eds_create_memory_stream(dir_info.size)?;
-
-    let progress_context = Arc::new(Mutex::new(ProgressContext {}));
-    set_progress_callback!(out_stream, progress_context, progress_handler);
-
-    println!("Start download");
+    let _progress_context = set_progress_callback!(out_stream, progress_handler);
     eds_download(in_ref, dir_info.size, out_stream)?;
-    println!("End download");
     eds_download_complete(in_ref)?;
-    // let image_ref = eds_create_image_ref(out_stream)?;
-    // let image_info = eds_get_image_info(image_ref, EdsImageSource::FullView)?;
-    // println!("{image_info:?}");
     let pointer = eds_get_pointer(out_stream)? as *const u8;
     let length = eds_get_length(out_stream)?;
     let data = unsafe { slice::from_raw_parts(pointer, length as usize) }.to_vec();
     eds_release(out_stream)?;
-
-    let buf = Vector::from_slice(&data);
-    if let Ok(mat) = imgcodecs::imdecode(&buf, imgcodecs::IMREAD_COLOR) {
-        highgui::named_window("Pic", highgui::WINDOW_NORMAL).unwrap();
-        highgui::imshow("Pic", &mat).unwrap();
-        let _key = highgui::wait_key(1).unwrap_or_default();
-    }
-    Ok(())
+    Ok(data)
 }
 
 async fn get_event(term: Arc<AtomicBool>) {
@@ -102,8 +85,8 @@ enum Mode {
 
 fn set_mode(camera_ref: EdsBaseRef, mode: Mode) -> Result<(), EdsError> {
     let (evf_mode, output_device) = match mode {
-        Mode::Video => (1, EdsEvfOutputDevice::PC),
-        Mode::Photo => (0, EdsEvfOutputDevice::Z),
+        Mode::Video => (EdsEvfMode::Enable, EdsEvfOutputDevice::PC),
+        Mode::Photo => (EdsEvfMode::Disable, EdsEvfOutputDevice::Z),
     };
     set_evf_mode(camera_ref, evf_mode)?;
     set_output_device(camera_ref, output_device)
@@ -117,7 +100,7 @@ fn obj_handler(
     println!("{in_event:?}");
     let res = match in_event {
         EdsObjectEvent::DirItemRequestTransfer => match download(in_ref) {
-            Ok(()) => EdsError::ErrOk,
+            Ok(_data) => EdsError::ErrOk,
             Err(err) => err,
         },
         _ => EdsError::ErrOk,
@@ -202,13 +185,16 @@ where
     eds_release(camera_ref)
 }
 
+async fn wait_job(state_contexe: Arc<Mutex<StateContext>>) {
+    while state_contexe.lock().await.job_status > 0 {
+        time::sleep(Duration::from_secs(1)).await;
+    }
+}
+
 async fn core(camera_ref: EdsBaseRef) -> Result<(), EdsError> {
-    let status_context = Arc::new(Mutex::new(StateContext { job_status: 0 }));
-    let object_context = Arc::new(Mutex::new(ObjectContext {}));
-    let property_context = Arc::new(Mutex::new(PropertyContext {}));
-    set_object_event_handler!(camera_ref, object_context, obj_handler);
-    set_state_event_handler!(camera_ref, status_context, state_handler);
-    set_property_event_handler!(camera_ref, property_context, property_handler);
+    let _object_context = set_object_event_handler!(camera_ref, obj_handler);
+    let state_context = set_state_event_handler!(camera_ref, state_handler);
+    let _property_context = set_property_event_handler!(camera_ref, property_handler);
 
     set_save_to(camera_ref, EdsSaveTo::Host)?;
 
@@ -223,7 +209,7 @@ async fn core(camera_ref: EdsBaseRef) -> Result<(), EdsError> {
     let term = Arc::new(AtomicBool::new(true));
     tokio::spawn(get_event(term.clone()));
 
-    let shoot_available = get_setting(camera_ref, EdsPropertyID::AvailableShots, 0)?;
+    let shoot_available: EdsUInt32 = get_raw_setting(camera_ref, EdsPropertyID::AvailableShots)?;
     println!("Shoot available : {:?}", shoot_available);
 
     time::sleep(Duration::from_secs(1)).await;
@@ -231,11 +217,14 @@ async fn core(camera_ref: EdsBaseRef) -> Result<(), EdsError> {
     println!("== Mode photo ==");
     set_mode(camera_ref, Mode::Photo)?;
 
-    println!("== Shoot ==");
-    eds_send_command(camera_ref, PressShutterButton, Completely.into())?;
-    eds_send_command(camera_ref, PressShutterButton, Off.into())?;
+    for _ in 0..1 {
+        println!("== Shoot ==");
+        eds_send_command(camera_ref, PressShutterButton, Completely.into())?;
+        eds_send_command(camera_ref, PressShutterButton, Off.into())?;
+        wait_job(state_context.clone()).await;
+        time::sleep(Duration::from_secs(2)).await;
+    }
 
-    time::sleep(Duration::from_secs(1)).await;
     // highgui::destroy_all_windows().unwrap_or_default();
 
     // set_mode(camera_ref, Mode::Video)?;
@@ -247,8 +236,9 @@ async fn core(camera_ref: EdsBaseRef) -> Result<(), EdsError> {
     term.store(false, Ordering::SeqCst);
 
     println!("== Wait status job is zero ==");
-    while status_context.lock().await.job_status > 0 {
-        time::sleep(Duration::from_secs(1)).await;
-    }
+    wait_job(state_context.clone()).await;
+
+    time::sleep(Duration::from_secs(2)).await;
+
     Ok(())
 }

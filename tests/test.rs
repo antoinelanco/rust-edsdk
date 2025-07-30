@@ -1,22 +1,17 @@
-use edsdk::{
-    EdsCameraListRef, EdsCameraRef, EdsDataType, EdsError, EdsInt8, EdsInt16, EdsInt32, EdsInt64,
-    EdsPropertyID, EdsUInt8, EdsUInt16, EdsUInt32, EdsUInt64, EdsVoid, eds_close_session,
-    eds_get_camera_list, eds_get_child_at_index, eds_get_property_data, eds_get_property_size,
-    eds_initialize_sdk, eds_open_session, eds_release, eds_terminate_sdk,
-};
+use edsdk::*;
 
 #[test]
 fn main() -> Result<(), EdsError> {
     eds_initialize_sdk()?;
-    let list: EdsCameraListRef = eds_get_camera_list()?;
-    let camera: EdsCameraRef = eds_get_child_at_index(list, 0)?;
+    let list = eds_get_camera_list()?;
+    let count = eds_get_child_count(list)?;
+    assert!(count.gt(&0), "Camera not found");
+    let camera = eds_get_child_at_index(list, 0)?;
     eds_open_session(camera)?;
-
-    let in_param: EdsInt32 = 0;
-    let in_property_id: EdsPropertyID = EdsPropertyID::BatteryLevel;
-    let (_data_type, size): (EdsDataType, EdsUInt32) =
-        eds_get_property_size(camera, in_property_id, in_param)?;
-    let data: *mut EdsVoid = eds_get_property_data(camera, in_property_id, in_param, size)?;
+    let in_param = 0;
+    let in_property_id = EdsPropertyID::BatteryLevel;
+    let (_data_type, size) = eds_get_property_size(camera, in_property_id, in_param)?;
+    let data = eds_get_property_data(camera, in_property_id, in_param, size)?;
 
     println!("{:?}", _data_type);
     match _data_type {
@@ -30,6 +25,21 @@ fn main() -> Result<(), EdsError> {
         EdsDataType::UInt64 => println!("{:?}: {}", in_property_id, data as EdsUInt64),
         _ => todo!(),
     }
+
+    eds_close_session(camera)?;
+    eds_release(camera)?;
+    eds_release(list)?;
+    eds_terminate_sdk()
+}
+
+#[test]
+fn min() -> Result<(), EdsError> {
+    eds_initialize_sdk()?;
+    let list = eds_get_camera_list()?;
+    let camera = eds_get_child_at_index(list, 0)?;
+    eds_open_session(camera)?;
+    let _data = eds_get_property_data(camera, EdsPropertyID::BatteryLevel, 0, 4)?;
+    println!("{:?}", _data);
 
     eds_close_session(camera)?;
     eds_release(camera)?;

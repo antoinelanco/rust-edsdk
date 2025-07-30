@@ -9,13 +9,14 @@ use std::{
 };
 
 use edsdk::{
-    EdsBaseRef, EdsCameraCommand, EdsError, EdsEvfOutputDevice, EdsImageSource, EdsObjectEvent,
-    EdsObjectEventHandler, EdsSaveTo, EdsShutterButton, EdsVoid, TagEdsCapacity, eds_close_session,
-    eds_create_image_ref, eds_create_memory_stream, eds_download, eds_download_complete,
-    eds_get_camera_list, eds_get_child_at_index, eds_get_directory_item_info, eds_get_event,
-    eds_get_image_info, eds_get_length, eds_get_pointer, eds_initialize_sdk, eds_open_session,
-    eds_release, eds_send_command, eds_set_capacity, eds_set_object_event_handler,
-    eds_terminate_sdk, set_evf_mode, set_output_device, set_save_to,
+    EdsBaseRef, EdsCameraCommand, EdsError, EdsEvfMode, EdsEvfOutputDevice, EdsImageSource,
+    EdsObjectEvent, EdsObjectEventHandler, EdsSaveTo, EdsShutterButton, EdsVoid, TagEdsCapacity,
+    eds_close_session, eds_create_image_ref, eds_create_memory_stream, eds_download,
+    eds_download_complete, eds_get_camera_list, eds_get_child_at_index,
+    eds_get_directory_item_info, eds_get_event, eds_get_image_info, eds_get_length,
+    eds_get_pointer, eds_initialize_sdk, eds_open_session, eds_release, eds_send_command,
+    eds_set_capacity, eds_set_object_event_handler, eds_terminate_sdk, set_evf_mode,
+    set_output_device, set_save_to,
 };
 use tokio::time;
 
@@ -80,7 +81,7 @@ async fn ok_test() -> Result<(), EdsError> {
     };
     eds_set_capacity(camera_ref, in_capacity)?;
 
-    set_evf_mode(camera_ref, 0)?;
+    set_evf_mode(camera_ref, EdsEvfMode::Disable)?;
     set_output_device(camera_ref, EdsEvfOutputDevice::Z)?;
 
     let term = Arc::new(AtomicBool::new(true));
@@ -122,7 +123,7 @@ async fn ko_test() -> Result<(), EdsError> {
     };
     eds_set_capacity(camera_ref, in_capacity)?;
 
-    set_evf_mode(camera_ref, 0)?;
+    set_evf_mode(camera_ref, EdsEvfMode::Disable)?;
     set_output_device(camera_ref, EdsEvfOutputDevice::Z)?;
 
     let object_handler: EdsObjectEventHandler = Some(wrapper as unsafe extern "C" fn(_, _, _) -> _);
