@@ -1,0 +1,1873 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Antoine Lanco
+
+use macro_lib::{IntoI32, TryFromI32};
+use num_enum::{IntoPrimitive, TryFromPrimitive};
+use std::{fmt::Debug, os::raw::c_void};
+
+#[repr(transparent)]
+#[derive(Debug, Clone, Copy)]
+pub struct Wrapper<T>(pub T);
+unsafe impl<T: Send> Send for Wrapper<T> {}
+unsafe impl<T: Sync> Sync for Wrapper<T> {}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct __EdsObject {
+    _unused: [u8; 0],
+}
+pub type EdsVoid = c_void;
+pub type EdsBool = bool;
+pub type EdsChar = u8;
+pub type EdsInt8 = i8;
+pub type EdsUInt8 = u8;
+pub type EdsInt16 = i16;
+pub type EdsUInt16 = u16;
+pub type EdsInt32 = i32;
+pub type EdsUInt32 = u32;
+pub type EdsInt64 = i64;
+pub type EdsUInt64 = u64;
+pub type EdsFloat = f32;
+pub type EdsDouble = f64;
+
+#[repr(transparent)]
+#[derive(Debug, Copy, Clone)]
+pub struct EdsBaseRef(pub *mut __EdsObject);
+unsafe impl Send for EdsBaseRef {}
+unsafe impl Sync for EdsBaseRef {}
+impl EdsBaseRef {
+    fn new() -> EdsBaseRef {
+        EdsBaseRef(null_mut())
+    }
+}
+// pub type EdsBaseRef = *mut __EdsObject;
+
+pub type EdsCameraListRef = EdsBaseRef;
+pub type EdsCameraRef = EdsBaseRef;
+pub type EdsVolumeRef = EdsBaseRef;
+pub type EdsDirectoryItemRef = EdsBaseRef;
+pub type EdsStreamRef = EdsBaseRef;
+pub type EdsImageRef = EdsStreamRef;
+pub type EdsEvfImageRef = EdsBaseRef;
+
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsPropertyID {
+    Unknown = 65535,
+    ProductName = 2,
+    OwnerName = 4,
+    MakerName = 5,
+    DateTime = 6,
+    FirmwareVersion = 7,
+    BatteryLevel = 8,
+    SaveTo = 11,
+    CurrentStorage = 12,
+    CurrentFolder = 13,
+    BatteryQuality = 16,
+    BodyIDEx = 21,
+    HDDirectoryStructure = 32,
+    ImageQuality = 256,
+    Orientation = 258,
+    ICCProfile = 259,
+    FocusInfo = 260,
+    WhiteBalance = 262,
+    ColorTemperature = 263,
+    WhiteBalanceShift = 264,
+    ColorSpace = 269,
+    PictureStyle = 276,
+    PictureStyleDesc = 277,
+    PictureStyleCaption = 512,
+    GPSVersionID = 2048,
+    GPSLatitudeRef = 2049,
+    GPSLatitude = 2050,
+    GPSLongitudeRef = 2051,
+    GPSLongitude = 2052,
+    GPSAltitudeRef = 2053,
+    GPSAltitude = 2054,
+    GPSTimeStamp = 2055,
+    GPSSatellites = 2056,
+    GPSStatus = 2057,
+    GPSMapDatum = 2066,
+    GPSDateStamp = 2077,
+    AEMode = 1024,
+    DriveMode = 1025,
+    ISOSpeed = 1026,
+    MeteringMode = 1027,
+    AFMode = 1028,
+    Av = 1029,
+    Tv = 1030,
+    ExposureCompensation = 1031,
+    FocalLength = 1033,
+    AvailableShots = 1034,
+    Bracket = 1035,
+    WhiteBalanceBracket = 1036,
+    LensName = 1037,
+    AEBracket = 1038,
+    FEBracket = 1039,
+    ISOBracket = 1040,
+    NoiseReduction = 1041,
+    FlashOn = 1042,
+    RedEye = 1043,
+    FlashMode = 1044,
+    LensStatus = 1046,
+    Artist = 1048,
+    Copyright = 1049,
+    AEModeSelect = 1078,
+    PowerZoomSpeed = 1092,
+    ColorFilter = 1151,
+    DigitalZoomSetting = 1143,
+    AfLockState = 1152,
+    BrightnessSetting = 1155,
+    EvfOutputDevice = 1280,
+    EvfMode = 1281,
+    EvfWhiteBalance = 1282,
+    EvfColorTemperature = 1283,
+    EvfDepthOfFieldPreview = 1284,
+    EvfZoom = 1287,
+    EvfZoomPosition = 1288,
+    EvfHistogram = 1290,
+    EvfImagePosition = 1291,
+    EvfHistogramStatus = 1292,
+    EvfAfmode = 1294,
+    Record = 1296,
+    EvfHistogramY = 1301,
+    EvfHistogramR = 1302,
+    EvfHistogramG = 1303,
+    EvfHistogramB = 1304,
+    EvfCoordinateSystem = 1344,
+    EvfZoomRect = 1345,
+    EvfImageClipRect = 1349,
+    EvfPowerZoomCurPosition = 1360,
+    EvfPowerZoomMaxPosition = 1361,
+    EvfPowerZoomMinPosition = 1362,
+    UTCTime = 16777238,
+    TimeZone = 16777239,
+    SummerTimeSetting = 16777240,
+    ManualWhiteBalanceData = 16777732,
+    TempStatus = 16778261,
+    MirrorLockUpState = 16778273,
+    FixedMovie = 16778274,
+    MovieParam = 16778275,
+    Aspect = 16778289,
+    ContinuousAfMode = 16778291,
+    MirrorUpSetting = 16778296,
+    MovieServoAf = 16778302,
+    AutoPowerOffSetting = 16778334,
+    AFEyeDetect = 16778325,
+    FocusShiftSetting = 16778327,
+    MovieHFRSetting = 16778333,
+    AFTrackingObject = 16778344,
+    RegisterFocusEdge = 16778348,
+    DriveFocusToEdge = 16778349,
+    FocusPosition = 16778350,
+    StillMovieDivideSetting = 16778352,
+    CardExtension = 16778353,
+    MovieCardExtension = 16778354,
+    StillCurrentMedia = 16778355,
+    MovieCurrentMedia = 16778356,
+    ApertureLockSetting = 16778358,
+    LensIsSetting = 16778432,
+    ScreenDimmerTime = 16778433,
+    ScreenOffTime = 16778434,
+    ViewfinderOffTime = 16778435,
+    EvfClickWbcoeffs = 16778502,
+    EvfRollingPitching = 16778564,
+    EvfVisibleRect = 16778566,
+    DcZoom = 1536,
+    DcStrobe = 1537,
+    LensBarrelStatus = 1541,
+}
+
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsCameraCommand {
+    TakePicture = 0,
+    ExtendShutDownTimer = 1,
+    BulbStart = 2,
+    BulbEnd = 3,
+    DoEvfAf = 258,
+    DriveLensEvf = 259,
+    DoClickWBEvf = 260,
+    MovieSelectSwON = 263,
+    MovieSelectSwOFF = 264,
+    PressShutterButton = 4,
+    RequestRollPitchLevel = 265,
+    DrivePowerZoom = 269,
+    SetRemoteShootingMode = 271,
+    RequestSensorCleaning = 274,
+    SetModeDialDisable = 275,
+}
+
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsCameraStatusCommand {
+    UILock = 0,
+    UIUnLock = 1,
+    EnterDirectTransfer = 2,
+    ExitDirectTransfer = 3,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsPropertyEvent {
+    All = 256,
+    PropertyChanged = 257,
+    PropertyDescChanged = 258,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsObjectEvent {
+    All = 512,
+    VolumeInfoChanged = 513,
+    VolumeUpdateItems = 514,
+    FolderUpdateItems = 515,
+    DirItemCreated = 516,
+    DirItemRemoved = 517,
+    DirItemInfoChanged = 518,
+    DirItemContentChanged = 519,
+    DirItemRequestTransfer = 520,
+    DirItemRequestTransferDT = 521,
+    DirItemCancelTransferDT = 522,
+    VolumeAdded = 524,
+    VolumeRemoved = 525,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsStateEvent {
+    All = 768,
+    Shutdown = 769,
+    JobStatusChanged = 770,
+    WillSoonShutDown = 771,
+    ShutDownTimerUpdate = 772,
+    CaptureError = 773,
+    InternalError = 774,
+    AfResult = 777,
+    BulbExposureTime = 784,
+    PowerZoomInfoChanged = 785,
+}
+
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsError {
+    IsspecificMask = 2147483648,
+    ComponentidMask = 2130706432,
+    ReservedMask = 16711680,
+    ErroridMask = 65535,
+    CmpIdClientComponentid = 16777216,
+    CmpIdLlsdkComponentid = 33554432,
+    CmpIdHlsdkComponentid = 50331648,
+    Ok = 0,
+    Unimplemented = 1,
+    InternalError = 2,
+    MemAllocFailed = 3,
+    MemFreeFailed = 4,
+    OperationCancelled = 5,
+    IncompatibleVersion = 6,
+    NotSupported = 7,
+    UnexpectedException = 8,
+    ProtectionViolation = 9,
+    MissingSubcomponent = 10,
+    SelectionUnavailable = 11,
+    FileIoError = 32,
+    FileTooManyOpen = 33,
+    FileNotFound = 34,
+    FileOpenError = 35,
+    FileCloseError = 36,
+    FileSeekError = 37,
+    FileTellError = 38,
+    FileReadError = 39,
+    FileWriteError = 40,
+    FilePermissionError = 41,
+    FileDiskFullError = 42,
+    FileAlreadyExists = 43,
+    FileFormatUnrecognized = 44,
+    FileDataCorrupt = 45,
+    FileNamingNa = 46,
+    DirNotFound = 64,
+    DirIoError = 65,
+    DirEntryNotFound = 66,
+    DirEntryExists = 67,
+    DirNotEmpty = 68,
+    PropertiesUnavailable = 80,
+    PropertiesMismatch = 81,
+    PropertiesNotLoaded = 83,
+    InvalidParameter = 96,
+    InvalidHandle = 97,
+    InvalidPointer = 98,
+    InvalidIndex = 99,
+    InvalidLength = 100,
+    InvalidFnPointer = 101,
+    InvalidSortFn = 102,
+    DeviceNotFound = 128,
+    DeviceBusy = 129,
+    DeviceInvalid = 130,
+    DeviceEmergency = 131,
+    DeviceMemoryFull = 132,
+    DeviceInternalError = 133,
+    DeviceInvalidParameter = 134,
+    DeviceNoDisk = 135,
+    DeviceDiskError = 136,
+    DeviceCfGateChanged = 137,
+    DeviceDialChanged = 138,
+    DeviceNotInstalled = 139,
+    DeviceStayAwake = 140,
+    DeviceNotReleased = 141,
+    StreamIoError = 160,
+    StreamNotOpen = 161,
+    StreamAlreadyOpen = 162,
+    StreamOpenError = 163,
+    StreamCloseError = 164,
+    StreamSeekError = 165,
+    StreamTellError = 166,
+    StreamReadError = 167,
+    StreamWriteError = 168,
+    StreamPermissionError = 169,
+    StreamCouldntBeginThread = 170,
+    StreamBadOptions = 171,
+    StreamEndOfStream = 172,
+    CommPortIsInUse = 192,
+    CommDisconnected = 193,
+    CommDeviceIncompatible = 194,
+    CommBufferFull = 195,
+    CommUsbBusErr = 196,
+    UsbDeviceLockError = 208,
+    UsbDeviceUnlockError = 209,
+    StiUnknownError = 224,
+    StiInternalError = 225,
+    StiDeviceCreateError = 226,
+    StiDeviceReleaseError = 227,
+    DeviceNotLaunched = 228,
+    EnumNa = 240,
+    InvalidFnCall = 241,
+    HandleNotFound = 242,
+    InvalidId = 243,
+    WaitTimeoutError = 244,
+    SessionNotOpen = 8195,
+    InvalidTransactionid = 8196,
+    IncompleteTransfer = 8199,
+    InvalidStrageid = 8200,
+    DevicepropNotSupported = 8202,
+    InvalidObjectformatcode = 8203,
+    SelfTestFailed = 8209,
+    PartialDeletion = 8210,
+    SpecificationByFormatUnsupported = 8212,
+    NoValidObjectinfo = 8213,
+    InvalidCodeFormat = 8214,
+    UnknownVendorCode = 8215,
+    CaptureAlreadyTerminated = 8216,
+    PtpDeviceBusy = 8217,
+    InvalidParentobject = 8218,
+    InvalidDevicepropFormat = 8219,
+    InvalidDevicepropValue = 8220,
+    SessionAlreadyOpen = 8222,
+    TransactionCancelled = 8223,
+    SpecificationOfDestinationUnsupported = 8224,
+    NotCameraSupportSdkVersion = 8225,
+    UnknownCommand = 40961,
+    OperationRefused = 40965,
+    LensCoverClose = 40966,
+    LowBattery = 41217,
+    ObjectNotready = 41218,
+    CannotMakeObject = 41220,
+    MemorystatusNotready = 41222,
+    TakePictureAfNg = 36097,
+    TakePictureReserved = 36098,
+    TakePictureMirrorUpNg = 36099,
+    TakePictureSensorCleaningNg = 36100,
+    TakePictureSilenceNg = 36101,
+    TakePictureNoCardNg = 36102,
+    TakePictureCardNg = 36103,
+    TakePictureCardProtectNg = 36104,
+    TakePictureMovieCropNg = 36105,
+    TakePictureStroboChargeNg = 36106,
+    TakePictureNoLensNg = 36107,
+    TakePictureSpecialMovieModeNg = 36108,
+    TakePictureLvRelProhibitModeNg = 36109,
+    TakePictureMovieModeNg = 36110,
+    TakePictureRetructedLensNg = 36111,
+    LastGenericErrorPlusOne = 245,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy, Default)]
+pub enum EdsDataType {
+    #[default]
+    Unknown = 0,
+    Bool = 1,
+    String = 2,
+    Int8 = 3,
+    UInt8 = 6,
+    Int16 = 4,
+    UInt16 = 7,
+    Int32 = 8,
+    UInt32 = 9,
+    Int64 = 10,
+    UInt64 = 11,
+    Float = 12,
+    Double = 13,
+    ByteBlock = 14,
+    Rational = 20,
+    Point = 21,
+    Rect = 22,
+    Time = 23,
+    BoolArray = 30,
+    Int8Array = 31,
+    Int16Array = 32,
+    Int32Array = 33,
+    Uint8Array = 34,
+    Uint16Array = 35,
+    Uint32Array = 36,
+    RationalArray = 37,
+    FocusInfo = 101,
+    PictureStyleDesc = 102,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy, IntoI32)]
+pub enum EdsEvfAf {
+    Off = 0,
+    On = 1,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy, IntoPrimitive, IntoI32)]
+pub enum EdsShutterButton {
+    Off = 0,
+    Halfway = 1,
+    Completely = 3,
+    HalfwayNonAf = 65537,
+    CompletelyNonAf = 65539,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy, IntoI32)]
+pub enum EdsEvfDriveLens {
+    Near1 = 1,
+    Near2 = 2,
+    Near3 = 3,
+    Far1 = 32769,
+    Far2 = 32770,
+    Far3 = 32771,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy, IntoI32)]
+pub enum EdsDrivePowerZoom {
+    Stop = 0,
+    LimitOffWide = 1,
+    LimitOffTele = 2,
+    LimitOnWide = 17,
+    LimitOnTele = 18,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
+pub enum EdsEvfDepthOfFieldPreview {
+    Off = 0,
+    On = 1,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsSeekOrigin {
+    Cur = 0,
+    Begin = 1,
+    End = 2,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy, Default)]
+pub enum EdsAccess {
+    #[default]
+    Read = 0,
+    Write = 1,
+    ReadWrite = 2,
+    Error = 0xffffffff,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsFileCreateDisposition {
+    CreateNew = 0,
+    CreateAlways = 1,
+    OpenExisting = 2,
+    OpenAlways = 3,
+    TruncateExsisting = 4,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsImageType {
+    Unknown = 0,
+    Jpeg = 1,
+    CRW = 2,
+    RAW = 4,
+    CR2 = 6,
+    HEIF = 8,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsImageSize {
+    Large = 0,
+    Middle = 1,
+    Small = 2,
+    Middle1 = 5,
+    Middle2 = 6,
+    Small1 = 14,
+    Small2 = 15,
+    Small3 = 16,
+    Unknown = 0xffffffff,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsCompressQuality {
+    Normal = 2,
+    Fine = 3,
+    Lossless = 4,
+    SuperFine = 5,
+    Unknown = 0xffffffff,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive, TryFromI32)]
+pub enum EdsImageQuality {
+    LJ = 1113871,
+    MJ = 17891087,
+    M1J = 84999951,
+    M1F = 85196559,
+    M1N = 85131023,
+    M2J = 101777167,
+    M2F = 101973775,
+    M2N = 101908239,
+    SJ = 34668303,
+    S1J = 235994895,
+    S2J = 252772111,
+    LJF = 1310479,
+    LJN = 1244943,
+    MJF = 18087695,
+    MJN = 18022159,
+    SJF = 34864911,
+    SJN = 34799375,
+    S1JF = 236191503,
+    S1JN = 236125967,
+    S2JF = 252968719,
+    S3JF = 269745935,
+    LR = 6618895,
+    LRLJF = 6553619,
+    LRLJN = 6553618,
+    LRMJF = 6553875,
+    LRMJN = 6553874,
+    LRSJF = 6554131,
+    LRSJN = 6554130,
+    LRS1JF = 6557203,
+    LRS1JN = 6557202,
+    LRS2JF = 6557459,
+    LRS3JF = 6557715,
+    LRLJ = 6553616,
+    LRMJ = 6553872,
+    LRM1J = 6554896,
+    LRM1F = 6554899,
+    LRM1N = 6554898,
+    LRM2J = 6555152,
+    LRM2F = 6555155,
+    LRM2N = 6555154,
+    LRSJ = 6554128,
+    LRS1J = 6557200,
+    LRS2J = 6557456,
+    MR = 23396111,
+    MRLJF = 23330835,
+    MRLJN = 23330834,
+    MRMJF = 23331091,
+    MRMJN = 23331090,
+    MRSJF = 23331347,
+    MRSJN = 23331346,
+    MRS1JF = 23334419,
+    MRS1JN = 23334418,
+    MRS2JF = 23334675,
+    MRS3JF = 23334931,
+    MRLJ = 23330832,
+    MRM1J = 23332112,
+    MRM1F = 23332115,
+    MRM1N = 23332114,
+    MRM2J = 23332368,
+    MRM2F = 23332371,
+    MRM2N = 23332370,
+    MRSJ = 23331344,
+    SR = 40173327,
+    SRLJF = 40108051,
+    SRLJN = 40108050,
+    SRMJF = 40108307,
+    SRMJN = 40108306,
+    SRSJF = 40108563,
+    SRSJN = 40108562,
+    SRS1JF = 40111635,
+    SRS1JN = 40111634,
+    SRS2JF = 40111891,
+    SRS3JF = 40112147,
+    SRLJ = 40108048,
+    SRM1J = 40109328,
+    SRM1F = 40109331,
+    SRM1N = 40109330,
+    SRM2J = 40109584,
+    SRM2F = 40109587,
+    SRM2N = 40109586,
+    SRSJ = 40108560,
+    CR = 6553359,
+    CRLJF = 6488083,
+    CRMJF = 6488339,
+    CRM1JF = 6489363,
+    CRM2JF = 6489619,
+    CRSJF = 6488595,
+    CRS1JF = 6491667,
+    CRS2JF = 6491923,
+    CRS3JF = 6492179,
+    CRLJN = 6488082,
+    CRMJN = 6488338,
+    CRM1JN = 6489362,
+    CRM2JN = 6489618,
+    CRSJN = 6488594,
+    CRS1JN = 6491666,
+    CRLJ = 6488080,
+    CRMJ = 6488336,
+    CRM1J = 6489360,
+    CRM2J = 6489616,
+    CRSJ = 6488592,
+    CRS1J = 6491664,
+    CRS2J = 6491920,
+    HEIFL = 8453903,
+    HEIFM = 25231119,
+    HEIFM1 = 92339983,
+    HEIFM2 = 109117199,
+    HEIFLF = 8650511,
+    HEIFLN = 8584975,
+    HEIFMF = 25427727,
+    HEIFMN = 25362191,
+    HEIFS1 = 243334927,
+    HEIFS1F = 243531535,
+    HEIFS1N = 243465999,
+    HEIFS2 = 260112143,
+    HEIFS2F = 260308751,
+    RHEIFL = 6553728,
+    RHEIFLF = 6553731,
+    RHEIFLN = 6553730,
+    RHEIFM = 6553984,
+    RHEIFM1 = 6555008,
+    RHEIFM2 = 6555264,
+    RHEIFMF = 6553987,
+    RHEIFMN = 6553986,
+    RHEIFS1 = 6557312,
+    RHEIFS1F = 6557315,
+    RHEIFS1N = 6557314,
+    RHEIFS2 = 6557568,
+    RHEIFS2F = 6557571,
+    CRHEIFL = 6488192,
+    CRHEIFLF = 6488195,
+    CRHEIFLN = 6488194,
+    CRHEIFM = 6488448,
+    CRHEIFMF = 6488451,
+    CRHEIFMN = 6488450,
+    CRHEIFM1 = 6489472,
+    CRHEIFM2 = 6489728,
+    CRHEIFS1 = 6491776,
+    CRHEIFS1F = 6491779,
+    CRHEIFS1N = 6491778,
+    CRHEIFS2 = 6492032,
+    CRHEIFS2F = 6492035,
+    Unknown = 0xffffffff,
+}
+
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsImageSource {
+    FullView = 0,
+    Thumbnail = 1,
+    Preview = 2,
+    RAWThumbnail = 3,
+    RAWFullView = 4,
+}
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, TryFromI32)]
+pub enum EdsAv {
+    Av1 = 0x08,
+    Av1_1 = 0x0B,
+    Av1_2 = 0x0C,
+    Av1_2_3 = 0x0D,
+    Av1_4 = 0x10,
+    Av1_6 = 0x13,
+    Av1_8 = 0x14,
+    Av1_8_3 = 0x15,
+    Av2 = 0x18,
+    Av2_2 = 0x1B,
+    Av2_5 = 0x1C,
+    Av2_5_3 = 0x1D,
+    Av2_8 = 0x20,
+    Av3_2 = 0x23,
+    Av3_4 = 0x85,
+    Av3_5 = 0x24,
+    Av3_5_3 = 0x25,
+    Av4 = 0x28,
+    Av4_5 = 0x2B,
+    Av5_0 = 0x2D,
+    Av5_6 = 0x30,
+    Av6_3 = 0x33,
+    Av6_7 = 0x34,
+    Av7_1 = 0x35,
+    Av8 = 0x38,
+    Av9 = 0x3B,
+    Av9_5 = 0x3C,
+    Av10 = 0x3D,
+    Av11 = 0x40,
+    Av13_3 = 0x43,
+    Av13 = 0x44,
+    Av14 = 0x45,
+    Av16 = 0x48,
+    Av18 = 0x4B,
+    Av19 = 0x4C,
+    Av20 = 0x4D,
+    Av22 = 0x50,
+    Av25 = 0x53,
+    Av27 = 0x54,
+    Av29 = 0x55,
+    Av32 = 0x58,
+    Av36 = 0x5B,
+    Av38 = 0x5C,
+    Av40 = 0x5D,
+    Av45 = 0x60,
+    Av51 = 0x63,
+    Av54 = 0x64,
+    Av57 = 0x65,
+    Av64 = 0x68,
+    Av72 = 0x6B,
+    Av76 = 0x6C,
+    Av80 = 0x6D,
+    Av91 = 0x70,
+}
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, TryFromI32)]
+pub enum EdsTv {
+    TvBulb = 0x0C,
+    Tv30s = 0x10,
+    Tv25s = 0x13,
+    Tv20s = 0x14,
+    Tv20s3 = 0x15,
+    Tv15s = 0x18,
+    Tv13s = 0x1B,
+    Tv10s = 0x1C,
+    Tv10s3 = 0x1D,
+    Tv8s = 0x20,
+    Tv6s3 = 0x23,
+    Tv6s = 0x24,
+    Tv5s = 0x25,
+    Tv4s = 0x28,
+    Tv3s2 = 0x2B,
+    Tv3s = 0x2C,
+    Tv2s5 = 0x2D,
+    Tv2s = 0x30,
+    Tv1s6 = 0x33,
+    Tv1s5 = 0x34,
+    Tv1s3 = 0x35,
+    Tv1s = 0x38,
+    Tv0s8 = 0x3B,
+    Tv0s7 = 0x3C,
+    Tv0s6 = 0x3D,
+    Tv0s5 = 0x40,
+    Tv0s4 = 0x43,
+    Tv0s3 = 0x44,
+    Tv0s3_3 = 0x45,
+    Tv1d4 = 0x48,
+    Tv1d5 = 0x4B,
+    Tv1d6 = 0x4C,
+    Tv1d6_3 = 0x4D,
+    Tv1d8 = 0x50,
+    Tv1d10_3 = 0x53,
+    Tv1d10 = 0x54,
+    Tv1d13 = 0x55,
+    Tv1d15 = 0x58,
+    Tv1d20_3 = 0x5B,
+    Tv1d20 = 0x5C,
+    Tv1d25 = 0x5D,
+    Tv1d30 = 0x60,
+    Tv1d40 = 0x63,
+    Tv1d45 = 0x64,
+    Tv1d50 = 0x65,
+    Tv1d60 = 0x68,
+    Tv1d80 = 0x6B,
+    Tv1d90 = 0x6C,
+    Tv1d100 = 0x6D,
+    Tv1d125 = 0x70,
+    Tv1d160 = 0x73,
+    Tv1d180 = 0x74,
+    Tv1d200 = 0x75,
+    Tv1d250 = 0x78,
+    Tv1d320 = 0x7B,
+    Tv1d350 = 0x7C,
+    Tv1d400 = 0x7D,
+    Tv1d500 = 0x80,
+    Tv1d640 = 0x83,
+    Tv1d750 = 0x84,
+    Tv1d800 = 0x85,
+    Tv1d1000 = 0x88,
+    Tv1d1250 = 0x8B,
+    Tv1d1500 = 0x8C,
+    Tv1d1600 = 0x8D,
+    Tv1d2000 = 0x90,
+    Tv1d2500 = 0x93,
+    Tv1d3000 = 0x94,
+    Tv1d3200 = 0x95,
+    Tv1d4000 = 0x98,
+    Tv1d5000 = 0x9B,
+    Tv1d6000 = 0x9C,
+    Tv1d6400 = 0x9D,
+    Tv1d8000 = 0xA0,
+    Tv1d10000 = 0xA3,
+    Tv1d12800 = 0xA5,
+    Tv1d16000 = 0xA8,
+    Tv1d20000 = 0xAB,
+    Tv1d25600 = 0xAD,
+    Tv1d32000 = 0xB0,
+}
+
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive)]
+pub enum EdsBatteryQuality {
+    Low,
+    Half,
+    HI,
+    Full,
+}
+
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, IntoPrimitive, TryFromPrimitive, TryFromI32)]
+pub enum EdsISO {
+    Auto = 0,
+    ISO6 = 0x00000028,
+    ISO12 = 0x00000030,
+    ISO25 = 0x00000038,
+    ISO50 = 0x00000040,
+    ISO100 = 0x00000048,
+    ISO125 = 0x0000004b,
+    ISO160 = 0x0000004d,
+    ISO200 = 0x00000050,
+    ISO250 = 0x00000053,
+    ISO320 = 0x00000055,
+    ISO400 = 0x00000058,
+    ISO500 = 0x0000005b,
+    ISO640 = 0x0000005d,
+    ISO800 = 0x00000060,
+    ISO1000 = 0x00000063,
+    ISO1250 = 0x00000065,
+    ISO1600 = 0x00000068,
+    ISO2000 = 0x0000006b,
+    ISO2500 = 0x0000006d,
+    ISO3200 = 0x00000070,
+    ISO4000 = 0x00000073,
+    ISO5000 = 0x00000075,
+    ISO6400 = 0x00000078,
+    ISO8000 = 0x0000007b,
+    ISO10000 = 0x0000007d,
+    ISO12800 = 0x00000080,
+    ISO16000 = 0x00000083,
+    ISO20000 = 0x00000085,
+    ISO25600 = 0x00000088,
+    ISO32000 = 0x0000008b,
+    ISO40000 = 0x0000008d,
+    ISO51200 = 0x00000090,
+    ISO64000 = 0x00000093,
+    ISO80000 = 0x00000095,
+    ISO102400 = 0x00000098,
+    ISO204800 = 0x000000a0,
+    ISO409600 = 0x000000a8,
+    ISO819200 = 0x000000b0,
+}
+
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsTargetImageType {
+    Unknown = 0,
+    Jpeg = 1,
+    TIFF = 7,
+    TIFF16 = 8,
+    RGB = 9,
+    RGB16 = 10,
+    DIB = 11,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsProgressOption {
+    NoReport = 0,
+    Done = 1,
+    Periodically = 2,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy, Default)]
+pub enum EdsFileAttributes {
+    #[default]
+    Normal = 0,
+    ReadOnly = 1,
+    Hidden = 2,
+    System = 4,
+    Archive = 32,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsObjectFormat {
+    Unknown = 0,
+    Jpeg = 14337,
+    CR2 = 45315,
+    MP4 = 47490,
+    CR3 = 45320,
+    HeifCode = 45323,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsBatteryLevel2 {
+    EmptyErrorBCLevel = 0,
+    Low = 9,
+    Half = 49,
+    Normal = 80,
+    Hi = 69,
+    Quarter = 19,
+    AC = 0xffffffff,
+    Unknown = 4294967294,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
+pub enum EdsSaveTo {
+    Camera = 1,
+    Host = 2,
+    Both = 3,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsStorageType {
+    Non = 0,
+    CF = 1,
+    SD = 2,
+    HD = 4,
+    CFast = 5,
+    CFe = 7,
+}
+#[repr(i32)]
+#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
+pub enum EdsWhiteBalance {
+    Auto = 0,
+    Daylight = 1,
+    Cloudy = 2,
+    Tungsten = 3,
+    Fluorescent = 4,
+    Strobe = 5,
+    WhitePaper = 6,
+    Shade = 8,
+    ColorTemp = 9,
+    PCSet1 = 10,
+    PCSet2 = 11,
+    PCSet3 = 12,
+    WhitePaper2 = 15,
+    WhitePaper3 = 16,
+    WhitePaper4 = 18,
+    WhitePaper5 = 19,
+    PCSet4 = 20,
+    PCSet5 = 21,
+    AwbWhite = 23,
+    Click = -1,
+    Pasted = -2,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsColorSpace {
+    SRgb = 1,
+    AdobeRGB = 2,
+    Unknown = 0xffffffff,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsPictureStyle {
+    Standard = 129,
+    Portrait = 130,
+    Landscape = 131,
+    Neutral = 132,
+    Faithful = 133,
+    Monochrome = 134,
+    Auto = 135,
+    FineDetail = 136,
+    User1 = 33,
+    User2 = 34,
+    User3 = 35,
+    PC1 = 65,
+    PC2 = 66,
+    PC3 = 67,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsTransferOption {
+    ByDirectTransfer = 1,
+    ByRelease = 2,
+    ToDesktop = 256,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsAEMode {
+    Program = 0,
+    Tv = 1,
+    Av = 2,
+    Manual = 3,
+    Bulb = 4,
+    ADep = 5,
+    DEP = 6,
+    Custom = 7,
+    Lock = 8,
+    Green = 9,
+    NightPortrait = 10,
+    Sports = 11,
+    Portrait = 12,
+    Landscape = 13,
+    Closeup = 14,
+    FlashOff = 15,
+    CreativeAuto = 19,
+    Movie = 20,
+    PhotoInMovie = 21,
+    SceneIntelligentAuto = 22,
+    SCN = 25,
+    NightScenes = 23,
+    BacklitScenes = 24,
+    Children = 26,
+    Food = 27,
+    CandlelightPortraits = 28,
+    CreativeFilter = 29,
+    RoughMonoChrome = 30,
+    SoftFocus = 31,
+    ToyCamera = 32,
+    Fisheye = 33,
+    WaterColor = 34,
+    Miniature = 35,
+    HdrStandard = 36,
+    HdrVivid = 37,
+    HdrBold = 38,
+    HdrEmbossed = 39,
+    MovieFantasy = 40,
+    MovieOld = 41,
+    MovieMemory = 42,
+    MovieDirectMono = 43,
+    MovieMini = 44,
+    PanningAssist = 45,
+    GroupPhoto = 46,
+    Myself = 50,
+    PlusMovieAuto = 51,
+    SmoothSkin = 52,
+    Panorama = 53,
+    Silent = 54,
+    Flexible = 55,
+    OilPainting = 56,
+    Fireworks = 57,
+    StarPortrait = 58,
+    StarNightscape = 59,
+    StarTrails = 60,
+    StarTimelapseMovie = 61,
+    BackgroundBlur = 62,
+    VideoBlog = 63,
+    Unknown = 0xffffffff,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsBracket {
+    AEB = 1,
+    ISOB = 2,
+    WBB = 4,
+    FEB = 8,
+    Unknown = 0xffffffff,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
+pub enum EdsEvfOutputDevice {
+    Z = 0,
+    TFT = 1,
+    PC = 2,
+    PcSmall = 8,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy, IntoPrimitive, TryFromPrimitive)]
+pub enum EdsEvfMode {
+    Disable,
+    Enable,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsEvfZoom {
+    Fit = 1,
+    X5 = 5,
+    X6 = 6,
+    X10 = 10,
+    X15 = 15,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsEvfAFMode {
+    Quick = 0,
+    Live = 1,
+    LiveFace = 2,
+    LiveMulti = 3,
+    LiveZone = 4,
+    LiveSingleExpandCross = 5,
+    LiveSingleExpandAround = 6,
+    LiveZoneLargeH = 7,
+    LiveZoneLargeV = 8,
+    LiveCatchAF = 9,
+    LiveSpotAF = 10,
+    FlexibleZone1 = 11,
+    FlexibleZone2 = 12,
+    FlexibleZone3 = 13,
+    WholeArea = 14,
+    NoTrakingSpot = 15,
+    NoTraking1point = 16,
+    NoTrakingExpandCross = 17,
+    NoTrakingExpandAround = 18,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsStroboMode {
+    Internal = 0,
+    ExternalETTL = 1,
+    ExternalATTL = 2,
+    ExternalTTL = 3,
+    ExternalAuto = 4,
+    ExternalManual = 5,
+    Manual = 6,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsETTL2Mode {
+    Evaluative = 0,
+    Average = 1,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsDcStrobe {
+    Auto = 0,
+    On = 1,
+    Slowsynchro = 2,
+    Off = 3,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsDcLensBarrelState {
+    Inner = 0,
+    Outer = 1,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy, IntoI32)]
+pub enum EdsDcRemoteShootingMode {
+    Stop = 0,
+    Start = 1,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsMirrorLockupState {
+    Disable = 0,
+    Enable = 1,
+    DuringShooting = 2,
+}
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum EdsMirrorUpSetting {
+    Off = 0,
+    On = 1,
+}
+
+#[doc = "Definition of base Structures"]
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Default)]
+pub struct TagEdsPoint {
+    x: EdsInt32,
+    y: EdsInt32,
+}
+#[doc = "Definition of base Structures"]
+pub type EdsPoint = TagEdsPoint;
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Default)]
+pub struct TagEdsSize {
+    width: EdsInt32,
+    height: EdsInt32,
+}
+pub type EdsSize = TagEdsSize;
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Default)]
+pub struct TagEdsRect {
+    point: EdsPoint,
+    size: EdsSize,
+}
+pub type EdsRect = TagEdsRect;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct TagEdsRational {
+    numerator: EdsInt32,
+    denominator: EdsUInt32,
+}
+pub type EdsRational = TagEdsRational;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct TagEdsTime {
+    year: EdsUInt32,
+    month: EdsUInt32,
+    day: EdsUInt32,
+    hour: EdsUInt32,
+    minute: EdsUInt32,
+    second: EdsUInt32,
+    milliseconds: EdsUInt32,
+}
+pub type EdsTime = TagEdsTime;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct TagEdsGpsMetaData {
+    latitude_ref: EdsUInt8,
+    longitude_ref: EdsUInt8,
+    altitude_ref: EdsUInt8,
+    status: EdsUInt8,
+    latitude: [EdsRational; 3usize],
+    longitude: [EdsRational; 3usize],
+    altitude: EdsRational,
+    time_stamp: [EdsRational; 3usize],
+    date_stamp_year: EdsUInt16,
+    date_stamp_month: EdsUInt8,
+    date_stamp_day: EdsUInt8,
+}
+pub type EdsGpsMetaData = TagEdsGpsMetaData;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct TagEdsDeviceInfo {
+    sz_port_name: [EdsChar; 256usize],
+    sz_device_description: [EdsChar; 256usize],
+    device_sub_type: EdsUInt32,
+    reserved: EdsUInt32,
+}
+
+impl TagEdsDeviceInfo {
+    pub fn get_sz_port_name(&self) -> String {
+        let s = String::from_utf8(self.sz_port_name.to_vec()).unwrap_or("Unknow".to_string());
+        let cleaned: String = s.chars().filter(|&c| c != '\0').collect();
+        cleaned
+    }
+    pub fn get_sz_device_description(&self) -> String {
+        let s =
+            String::from_utf8(self.sz_device_description.to_vec()).unwrap_or("Unknow".to_string());
+        let cleaned: String = s.chars().filter(|&c| c != '\0').collect();
+        cleaned
+    }
+}
+impl Default for TagEdsDeviceInfo {
+    fn default() -> Self {
+        Self {
+            sz_port_name: [EdsChar::default(); 256],
+            sz_device_description: [EdsChar::default(); 256],
+            device_sub_type: EdsUInt32::default(),
+            reserved: EdsUInt32::default(),
+        }
+    }
+}
+
+impl Debug for TagEdsDeviceInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "EdsDeviceInfo {{ sz_port_name: {}, sz_device_description: {}, device_sub_type: {}, reserved:{} }}",
+            self.get_sz_port_name(),
+            self.get_sz_device_description(),
+            self.device_sub_type,
+            self.reserved
+        )
+    }
+}
+
+pub type EdsDeviceInfo = TagEdsDeviceInfo;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct TagEdsVolumeInfo {
+    storage_type: EdsUInt32,
+    access: EdsAccess,
+    max_capacity: EdsUInt64,
+    free_space_in_bytes: EdsUInt64,
+    sz_volume_label: [EdsChar; 256usize],
+}
+
+impl TagEdsVolumeInfo {
+    pub fn get_sz_volume_label(&self) -> String {
+        let s = String::from_utf8(self.sz_volume_label.to_vec()).unwrap_or("Unknow".to_string());
+        let cleaned: String = s.chars().filter(|&c| c != '\0').collect();
+        cleaned
+    }
+}
+
+impl Default for TagEdsVolumeInfo {
+    fn default() -> Self {
+        Self {
+            storage_type: EdsUInt32::default(),
+            access: EdsAccess::default(),
+            max_capacity: EdsUInt64::default(),
+            free_space_in_bytes: EdsUInt64::default(),
+            sz_volume_label: [EdsChar::default(); 256],
+        }
+    }
+}
+impl Debug for TagEdsVolumeInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "EdsVolumeInfo {{ storage_type: {}, access: {:?}, max_capacity: {}, free_space_in_bytes:{}, sz_volume_label:{} }}",
+            self.storage_type,
+            self.access,
+            self.max_capacity,
+            self.free_space_in_bytes,
+            self.get_sz_volume_label()
+        )
+    }
+}
+
+pub type EdsVolumeInfo = TagEdsVolumeInfo;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct TagEdsDirectoryItemInfo {
+    pub size: EdsUInt64,
+    pub is_folder: EdsBool,
+    pub group_id: EdsUInt32,
+    pub option: EdsUInt32,
+    pub sz_file_name: [EdsChar; 256usize],
+    pub format: EdsUInt32,
+    pub date_time: EdsUInt32,
+}
+
+impl TagEdsDirectoryItemInfo {
+    pub fn get_sz_file_name(&self) -> String {
+        let s = String::from_utf8(self.sz_file_name.to_vec()).unwrap_or("Unknow".to_string());
+        let cleaned: String = s.chars().filter(|&c| c != '\0').collect();
+        cleaned
+    }
+}
+impl Default for TagEdsDirectoryItemInfo {
+    fn default() -> Self {
+        Self {
+            size: EdsUInt64::default(),
+            is_folder: EdsBool::default(),
+            group_id: EdsUInt32::default(),
+            option: EdsUInt32::default(),
+            sz_file_name: [EdsChar::default(); 256],
+            format: EdsUInt32::default(),
+            date_time: EdsUInt32::default(),
+        }
+    }
+}
+
+impl Debug for TagEdsDirectoryItemInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "EdsDirectoryItemInfo {{ size: {}, is_folder: {}, group_id: {}, option:{}, sz_file_name:{}, format:{}, date_time:{} }}",
+            self.size,
+            self.is_folder,
+            self.group_id,
+            self.option,
+            self.get_sz_file_name(),
+            self.format,
+            self.date_time,
+        )
+    }
+}
+
+pub type EdsDirectoryItemInfo = TagEdsDirectoryItemInfo;
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Default)]
+pub struct TagEdsImageInfo {
+    width: EdsUInt32,
+    height: EdsUInt32,
+    num_of_components: EdsUInt32,
+    component_depth: EdsUInt32,
+    effective_rect: EdsRect,
+    reserved1: EdsUInt32,
+    reserved2: EdsUInt32,
+}
+pub type EdsImageInfo = TagEdsImageInfo;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct TagEdsSaveImageSetting {
+    jpegquality: EdsUInt32,
+    icc_profile_stream: EdsStreamRef,
+    reserved: EdsUInt32,
+}
+pub type EdsSaveImageSetting = TagEdsSaveImageSetting;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct TagEdsPropertyDesc {
+    form: EdsInt32,
+    access: EdsInt32,
+    num_elements: EdsInt32,
+    prop_desc: [EdsInt32; 128usize],
+}
+impl Default for TagEdsPropertyDesc {
+    fn default() -> Self {
+        Self {
+            form: EdsInt32::default(),
+            access: EdsInt32::default(),
+            num_elements: EdsInt32::default(),
+            prop_desc: [EdsInt32::default(); 128],
+        }
+    }
+}
+pub type EdsPropertyDesc = TagEdsPropertyDesc;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct TagEdsPictureStyleDesc {
+    contrast: EdsInt32,
+    sharpness: EdsUInt32,
+    saturation: EdsInt32,
+    color_tone: EdsInt32,
+    filter_effect: EdsUInt32,
+    toning_effect: EdsUInt32,
+    sharp_fineness: EdsUInt32,
+    sharp_threshold: EdsUInt32,
+}
+pub type EdsPictureStyleDesc = TagEdsPictureStyleDesc;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct TagEdsFrameDesc {
+    valid: EdsUInt32,
+    selected: EdsUInt32,
+    just_focus: EdsUInt32,
+    rect: EdsRect,
+    reserved: EdsUInt32,
+}
+pub type EdsFocusPoint = TagEdsFrameDesc;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct TagEdsFocusInfo {
+    image_rect: EdsRect,
+    point_number: EdsUInt32,
+    focus_point: [EdsFocusPoint; 1053usize],
+    execute_mode: EdsUInt32,
+}
+pub type EdsFocusInfo = TagEdsFocusInfo;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct TagEdsUsersetData {
+    valid: EdsUInt32,
+    data_size: EdsUInt32,
+    sz_caption: [EdsChar; 32usize],
+    data: [EdsUInt8; 1usize],
+}
+pub type EdsUsersetData = TagEdsUsersetData;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct TagEdsCapacity {
+    pub number_of_free_clusters: EdsInt32,
+    pub bytes_per_sector: EdsInt32,
+    pub reset: EdsBool,
+}
+pub type EdsCapacity = TagEdsCapacity;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct TagEdsFramePoint {
+    x: EdsInt32,
+    y: EdsInt32,
+}
+pub type EdsFramePoint = TagEdsFramePoint;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct TagEdsCameraPos {
+    status: EdsInt32,
+    position: EdsInt32,
+    rolling: EdsInt32,
+    pitching: EdsInt32,
+}
+pub type EdsCameraPos = TagEdsCameraPos;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct TagEdsFocusShiftSet {
+    version: EdsInt32,
+    focus_shift_function: EdsInt32,
+    shooting_number: EdsInt32,
+    step_width: EdsInt32,
+    exposure_smoothing: EdsInt32,
+    focus_stacking_function: EdsInt32,
+    focus_stacking_trimming: EdsInt32,
+    flash_interval: EdsInt32,
+}
+pub type EdsFocusShiftSet = TagEdsFocusShiftSet;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct TagEdsManualWbdata {
+    valid: EdsInt32,
+    data_size: EdsInt32,
+    sz_caption: [EdsChar; 32usize],
+    data: [EdsInt8; 8usize],
+}
+pub type EdsManualWBData = TagEdsManualWbdata;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct TagApertureLockSetting {
+    aperture_lock_status: EdsUInt32,
+    av_value: EdsUInt32,
+}
+pub type ApertureLockSetting = TagApertureLockSetting;
+#[doc = "Callback Functions"]
+pub type EdsProgressCallback = ::std::option::Option<
+    unsafe extern "C" fn(
+        inPercent: EdsUInt32,
+        inContext: *mut EdsVoid,
+        outCancel: *mut EdsBool,
+    ) -> EdsError,
+>;
+pub type EdsCameraAddedHandler =
+    ::std::option::Option<unsafe extern "C" fn(inContext: *mut EdsVoid) -> EdsError>;
+pub type EdsPropertyEventHandler = ::std::option::Option<
+    unsafe extern "C" fn(
+        inEvent: EdsPropertyEvent,
+        inPropertyID: EdsPropertyID,
+        inParam: EdsUInt32,
+        inContext: *mut EdsVoid,
+    ) -> EdsError,
+>;
+pub type EdsObjectEventHandler = ::std::option::Option<
+    unsafe extern "C" fn(
+        inEvent: EdsObjectEvent,
+        inRef: EdsBaseRef,
+        inContext: *mut EdsVoid,
+    ) -> EdsError,
+>;
+pub type EdsStateEventHandler = ::std::option::Option<
+    unsafe extern "C" fn(
+        inEvent: EdsStateEvent,
+        inEventData: EdsUInt32,
+        inContext: *mut EdsVoid,
+    ) -> EdsError,
+>;
+pub type EdsReadStream = ::std::option::Option<
+    unsafe extern "C" fn(
+        inContext: *mut c_void,
+        inReadSize: EdsUInt32,
+        outBuffer: *mut EdsVoid,
+        outReadSize: *mut EdsUInt32,
+    ) -> EdsError,
+>;
+pub type EdsWriteStream = ::std::option::Option<
+    unsafe extern "C" fn(
+        inContext: *mut c_void,
+        inWriteSize: EdsUInt32,
+        inBuffer: *const EdsVoid,
+        outWrittenSize: *mut EdsUInt32,
+    ) -> EdsError,
+>;
+pub type EdsSeekStream = ::std::option::Option<
+    unsafe extern "C" fn(
+        inContext: *mut c_void,
+        inSeekOffset: EdsInt32,
+        inSeekOrigin: EdsSeekOrigin,
+    ) -> EdsError,
+>;
+pub type EdsTellStream = ::std::option::Option<
+    unsafe extern "C" fn(inContext: *mut c_void, outPosition: *mut EdsInt32) -> EdsError,
+>;
+pub type EdsGetStreamLength = ::std::option::Option<
+    unsafe extern "C" fn(inContext: *mut c_void, outLength: *mut EdsUInt32) -> EdsError,
+>;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct EdsIStream {
+    context: *mut c_void,
+    read: EdsReadStream,
+    write: EdsWriteStream,
+    seek: EdsSeekStream,
+    tell: EdsTellStream,
+    get_length: EdsGetStreamLength,
+}
+unsafe extern "C" {
+    #[doc = "Basic functions"]
+    fn EdsInitializeSDK() -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsTerminateSDK() -> EdsError;
+}
+unsafe extern "C" {
+    #[doc = "Reference-counter operating functions"]
+    fn EdsRetain(inRef: Wrapper<EdsBaseRef>) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsRelease(inRef: EdsBaseRef) -> EdsError;
+}
+unsafe extern "C" {
+    #[doc = "Item-tree operating functions"]
+    fn EdsGetChildCount(inRef: Wrapper<EdsBaseRef>, outCount: *mut EdsUInt32) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsGetChildAtIndex(
+        inRef: Wrapper<EdsBaseRef>,
+        inIndex: EdsInt32,
+        outRef: *mut EdsBaseRef,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsGetParent(inRef: Wrapper<EdsBaseRef>, outParentRef: *mut EdsBaseRef) -> EdsError;
+}
+unsafe extern "C" {
+    #[doc = "Property operating functions"]
+    fn EdsGetPropertySize(
+        inRef: Wrapper<EdsBaseRef>,
+        inPropertyID: EdsPropertyID,
+        inParam: EdsInt32,
+        outDataType: *mut EdsDataType,
+        outSize: *mut EdsUInt32,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsGetPropertyData(
+        inRef: Wrapper<EdsBaseRef>,
+        inPropertyID: EdsPropertyID,
+        inParam: EdsInt32,
+        inPropertySize: EdsUInt32,
+        outPropertyData: *mut EdsVoid,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsSetPropertyData(
+        inRef: Wrapper<EdsBaseRef>,
+        inPropertyID: EdsPropertyID,
+        inParam: EdsInt32,
+        inPropertySize: EdsUInt32,
+        inPropertyData: *const EdsVoid,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsGetPropertyDesc(
+        inRef: Wrapper<EdsBaseRef>,
+        inPropertyID: EdsPropertyID,
+        outPropertyDesc: *mut EdsPropertyDesc,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    #[doc = "Device-list and device operating functions"]
+    fn EdsGetCameraList(outCameraListRef: *mut EdsCameraListRef) -> EdsError;
+}
+unsafe extern "C" {
+    #[doc = "Camera operating functions"]
+    fn EdsGetDeviceInfo(
+        inCameraRef: Wrapper<EdsCameraRef>,
+        outDeviceInfo: *mut EdsDeviceInfo,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsOpenSession(inCameraRef: Wrapper<EdsCameraRef>) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsCloseSession(inCameraRef: Wrapper<EdsCameraRef>) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsSendCommand(
+        inCameraRef: Wrapper<EdsCameraRef>,
+        inCommand: EdsCameraCommand,
+        inParam: EdsInt32,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsSendStatusCommand(
+        inCameraRef: Wrapper<EdsCameraRef>,
+        inStatusCommand: EdsCameraStatusCommand,
+        inParam: EdsInt32,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsSetCapacity(inCameraRef: Wrapper<EdsCameraRef>, inCapacity: EdsCapacity) -> EdsError;
+}
+unsafe extern "C" {
+    #[doc = "Volume operating functions"]
+    fn EdsGetVolumeInfo(inVolumeRef: EdsVolumeRef, outVolumeInfo: *mut EdsVolumeInfo) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsFormatVolume(inVolumeRef: EdsVolumeRef) -> EdsError;
+}
+unsafe extern "C" {
+    #[doc = "Directory-item operating functions"]
+    fn EdsGetDirectoryItemInfo(
+        inDirItemRef: Wrapper<EdsDirectoryItemRef>,
+        outDirItemInfo: *mut EdsDirectoryItemInfo,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsDeleteDirectoryItem(inDirItemRef: Wrapper<EdsDirectoryItemRef>) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsDownload(
+        inDirItemRef: Wrapper<EdsDirectoryItemRef>,
+        inReadSize: EdsUInt64,
+        outStream: Wrapper<EdsStreamRef>,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsDownloadCancel(inDirItemRef: Wrapper<EdsDirectoryItemRef>) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsDownloadComplete(inDirItemRef: Wrapper<EdsDirectoryItemRef>) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsDownloadThumbnail(
+        inDirItemRef: Wrapper<EdsDirectoryItemRef>,
+        outStream: Wrapper<EdsStreamRef>,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsGetAttribute(
+        inDirItemRef: Wrapper<EdsDirectoryItemRef>,
+        outFileAttribute: *mut EdsFileAttributes,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsSetAttribute(
+        inDirItemRef: Wrapper<EdsDirectoryItemRef>,
+        inFileAttribute: EdsFileAttributes,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsSetMetaImage(
+        inDirItemRef: Wrapper<EdsDirectoryItemRef>,
+        inMetaType: EdsUInt32,
+        inMetaDataSize: EdsUInt32,
+        inMetaData: *const EdsVoid,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    #[doc = "Stream operating functions"]
+    fn EdsCreateFileStream(
+        inFileName: *const EdsChar,
+        inCreateDisposition: EdsFileCreateDisposition,
+        inDesiredAccess: EdsAccess,
+        outStream: *mut EdsStreamRef,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsCreateMemoryStream(inBufferSize: EdsUInt64, outStream: *mut EdsStreamRef) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsCreateFileStreamEx(
+        inFileName: *const EdsChar,
+        inCreateDisposition: EdsFileCreateDisposition,
+        inDesiredAccess: EdsAccess,
+        outStream: *mut EdsStreamRef,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsCreateMemoryStreamFromPointer(
+        inUserBuffer: *mut EdsVoid,
+        inBufferSize: EdsUInt64,
+        outStream: *mut EdsStreamRef,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsGetPointer(inStream: Wrapper<EdsStreamRef>, outPointer: *mut EdsBaseRef) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsRead(
+        inStreamRef: Wrapper<EdsStreamRef>,
+        inReadSize: EdsUInt64,
+        outBuffer: *mut EdsVoid,
+        outReadSize: *mut EdsUInt64,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsWrite(
+        inStreamRef: Wrapper<EdsStreamRef>,
+        inWriteSize: EdsUInt64,
+        inBuffer: *const EdsVoid,
+        outWrittenSize: *mut EdsUInt64,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsSeek(
+        inStreamRef: Wrapper<EdsStreamRef>,
+        inSeekOffset: EdsInt64,
+        inSeekOrigin: EdsSeekOrigin,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsGetPosition(inStreamRef: Wrapper<EdsStreamRef>, outPosition: *mut EdsUInt64) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsGetLength(inStreamRef: Wrapper<EdsStreamRef>, outLength: *mut EdsUInt64) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsCopyData(
+        inStreamRef: Wrapper<EdsStreamRef>,
+        inWriteSize: EdsUInt64,
+        outStreamRef: EdsStreamRef,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsSetProgressCallback(
+        inRef: Wrapper<EdsBaseRef>,
+        inProgressCallback: EdsProgressCallback,
+        inProgressOption: EdsProgressOption,
+        inContext: Wrapper<*mut EdsVoid>,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    #[doc = "Image operating functions"]
+    fn EdsCreateImageRef(
+        inStreamRef: Wrapper<EdsStreamRef>,
+        outImageRef: *mut EdsImageRef,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsGetImageInfo(
+        inImageRef: EdsImageRef,
+        inImageSource: EdsImageSource,
+        outImageInfo: *mut EdsImageInfo,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsGetImage(
+        inImageRef: EdsImageRef,
+        inImageSource: EdsImageSource,
+        inImageType: EdsTargetImageType,
+        inSrcRect: EdsRect,
+        inDstSize: EdsSize,
+        outStreamRef: EdsStreamRef,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsCreateEvfImageRef(
+        inStreamRef: Wrapper<EdsStreamRef>,
+        outEvfImageRef: *mut EdsEvfImageRef,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsDownloadEvfImage(
+        inCameraRef: Wrapper<EdsCameraRef>,
+        inEvfImageRef: Wrapper<EdsEvfImageRef>,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    #[doc = "Event handler registering functions"]
+    fn EdsSetCameraAddedHandler(
+        inCameraAddedHandler: EdsCameraAddedHandler,
+        inContext: *mut EdsVoid,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsSetPropertyEventHandler(
+        inCameraRef: Wrapper<EdsCameraRef>,
+        inEvnet: EdsPropertyEvent,
+        inPropertyEventHandler: EdsPropertyEventHandler,
+        inContext: *mut EdsVoid,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsSetObjectEventHandler(
+        inCameraRef: Wrapper<EdsCameraRef>,
+        inEvnet: EdsObjectEvent,
+        inObjectEventHandler: EdsObjectEventHandler,
+        inContext: *mut EdsVoid,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsSetCameraStateEventHandler(
+        inCameraRef: Wrapper<EdsCameraRef>,
+        inEvnet: EdsStateEvent,
+        inStateEventHandler: EdsStateEventHandler,
+        inContext: *mut EdsVoid,
+    ) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsCreateStream(inStream: *mut EdsIStream, outStreamRef: *mut EdsStreamRef) -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsGetEvent() -> EdsError;
+}
+unsafe extern "C" {
+    fn EdsSetFramePoint(
+        inCameraRef: Wrapper<EdsCameraRef>,
+        inFramepoint: EdsPoint,
+        inLockAfFrame: EdsBool,
+    ) -> EdsError;
+}

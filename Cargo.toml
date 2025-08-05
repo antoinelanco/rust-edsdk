@@ -1,14 +1,3 @@
-[package]
-name = "edsdk"
-version = "0.1.0"
-edition = "2024"
-description = "EOS Digital Software Development Kit"
-
-[dependencies]
-num_enum = "0.7.4"
-opencv = "0.95.1"
-tokio = { version = "1.46.1", features = ["full"] }
-
-
-# [build-dependencies]
-# bindgen = "0.72.0"
+[workspace]
+resolver = "3"
+members = ["edsdk", "macro_lib"]

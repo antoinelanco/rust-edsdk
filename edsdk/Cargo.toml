@@ -1,0 +1,14 @@
+[package]
+name = "edsdk"
+version = "0.1.0"
+edition = "2024"
+authors = ["Antoine Lanco"]
+repository = "https://github.com/antoinelanco/rust-edsdk"
+description = "Rust binding for EOS Digital Software Development Kit"
+license = "MIT"
+
+
+[dependencies]
+macro_lib = { path = "../macro_lib" }
+num_enum = "0.7.4"
+tokio = { version = "1.46.1", features = ["full"] }
